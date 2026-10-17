@@ -1,14 +1,19 @@
 {
-  "name": "Hive Notes - Beekeeping Inspections",
+  "id": "./",
+  "name": "Hive Notes",
   "short_name": "Hive Notes",
-  "start_url": "./index.html",
+  "description": "Voice-first beehive inspection notes with photos. Works offline; data stays on your phone.",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#121613",
   "theme_color": "#151a16",
+  "categories": ["productivity", "utilities"],
   "icons": [
     {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
-    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
-    {"src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml"}
+    {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+    {"src": "icons/icon-180.png", "sizes": "180x180", "type": "image/png", "purpose": "any"}
   ]
 }
