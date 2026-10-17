@@ -142,6 +142,8 @@ ol.setup{padding-left:24px;margin:0}ol.setup li{margin:0 0 12px;color:var(--mute
 .undoBtn{min-width:48px;min-height:48px;width:48px;height:48px;padding:0;flex:none;border-radius:50%;font-size:1.5rem;line-height:1;background:transparent;color:var(--amber2);border:2px solid var(--amber)}
 .undoBtn[aria-disabled=true]{opacity:.35;border-color:var(--line);color:var(--muted);cursor:default}
 .undoBtn[hidden]{display:none}
+#backBtn[hidden]{display:none!important}
+.saveDraft{flex:0 0 auto!important;background:transparent;border:2px solid var(--honey,#ffb627);color:var(--honey,#ffb627);font-weight:700}
 .instBtn{width:100%}
 @media (display-mode: standalone){.instOnly{display:none!important}header{padding-top:max(10px,env(safe-area-inset-top))}}
 html.standalone .instOnly{display:none!important}
@@ -246,7 +248,7 @@ function vForm(){var h=hive(route.id);
   '<div class="lbl">Colony strength</div>'+seg('strength',['weak','medium','strong'])+'<div class="lbl">Queen seen?</div>'+seg('queenSeen',['yes','no'],['Yes, seen','Not seen'])+'</div>'+
   '<div class="step" data-step="1" hidden><div class="lbl">Brood pattern</div>'+seg('brood',BROOD,['Solid','Spotty','Patchy','None'])+'<div class="lbl">Honey stores</div>'+seg('honey',HONEY)+tf('pests','Varroa, SHB, chalkbrood…',1)+tf('treatments','Product, dose…')+'</div>'+
   '<div class="step" data-step="2" hidden>'+tf('notes','Anything else…',1)+'<div class="lbl">Photos</div><div id="thumbs">'+thumbsHtml(draft.photos,true)+'</div><label class="btn" for="f_photos" style="margin-top:8px;width:100%;color:var(--text)">&#128247; Add photos</label><input id="f_photos" type="file" accept="image/*" capture="environment" multiple hidden><div id="busy" class="busy" hidden>Processing photos…</div></div>'+
-  '<div class="bar"><button type="button" id="prevBtn" data-act="prev">Cancel</button><button type="button" id="nextBtn" class="primary" data-act="next">Next &rsaquo;</button></div></form>';}
+  '<div class="bar"><button type="button" id="prevBtn" data-act="prev">Cancel</button><button type="button" id="saveDraftBtn" class="saveDraft" data-act="saveDraft" aria-label="Save draft">&#128190; Save</button><button type="button" id="nextBtn" class="primary" data-act="next">Next &rsaquo;</button></div></form>';}
 function showStep(){var k=draft.step||0;app.querySelectorAll('.step').forEach(function(el){el.hidden=+el.dataset.step!==k;});
   app.querySelectorAll('.tabs button').forEach(function(b){b.setAttribute('aria-current',+b.dataset.ix===k);});
   document.getElementById('prevBtn').innerHTML=k?'&lsaquo; Back':'Cancel';var n=document.getElementById('nextBtn');n.innerHTML=k===2?'&#10003; Save':'Next &rsaquo;';n.dataset.act=k===2?'save':'next';}
@@ -465,9 +467,14 @@ function addWeather(word){var el=document.getElementById('f_weather'),v=draft.we
 /* ---------- actions ---------- */
 function newInsp(){draft={step:0,date:today(),weather:'',strength:'',queenSeen:'',brood:'',honey:'',pests:'',treatments:'',notes:'',photos:[]};go({name:'form',id:route.id});}
 function confirmDiscard(){return !(draft&&(draft.photos.length||draft.notes||draft.weather||draft.strength||draft.pests))||confirm('Discard this inspection?');}
-function cancelForm(){if(confirmDiscard()){draft=null;dropDraftU();go({name:'hive',id:route.id});}}
+var DKEY='hiveNotes.draft';
+function storeDraft(){if(!draft||route.name!=='form')return false;var o={hive:route.id,t:Date.now(),d:draft};try{localStorage.setItem(DKEY,JSON.stringify(o));return true;}catch(e){try{o.d=Object.assign({},draft,{photos:[]});localStorage.setItem(DKEY,JSON.stringify(o));toast('Saved text ✓ (photos too large to keep in draft)',true);return 'nophotos';}catch(e2){toast('Could not save draft: storage full',true);return false;}}}
+function clearDraft(){try{localStorage.removeItem(DKEY);}catch(e){}}
+function saveDraftNow(){var r=storeDraft();if(r===true)toast('Saved ✓');}
+function restoreDraft(){try{var o=JSON.parse(localStorage.getItem(DKEY));if(o&&o.d&&hive(o.hive)){draft=Object.assign({step:0,photos:[]},o.d);if(!Array.isArray(draft.photos))draft.photos=[];route={name:'form',id:o.hive};return true;}if(o)clearDraft();}catch(e){clearDraft();}return false;}
+function cancelForm(){if(confirmDiscard()){clearDraft();draft=null;dropDraftU();go({name:'hive',id:route.id});}}
 function submitInsp(){var hv=hive(route.id),ins=Object.assign({id:uid(),created:Date.now()},draft);delete ins.step;ins.date=ins.date||today();var bI=capH([hv.id]);hv.inspections.push(ins);
-  if(save()){draft=null;dropDraftU();pushH('Save inspection',bI);toast('Inspection saved');go({name:'hive',id:route.id});}}
+  if(save()){clearDraft();draft=null;dropDraftU();pushH('Save inspection',bI);toast('Inspection saved');go({name:'hive',id:route.id});}}
 backBtn.onclick=function(){stopListen();if(route.name==='form'){if((draft.step||0)>0)return setStep(draft.step-1);return cancelForm();}
   if(route.name==='hive'||route.name==='addHive')go({name:'home'});else if(route.name==='insp')go({name:'hive',id:route.id});};
 
@@ -539,6 +546,7 @@ app.addEventListener('click',function(e){var b=e.target.closest('[data-act]');if
   else if(a==='next')setStep((draft.step||0)+1);
   else if(a==='prev'){if((draft.step||0)>0)setStep(draft.step-1);else cancelForm();}
   else if(a==='save')submitInsp();
+  else if(a==='saveDraft')saveDraftNow();
   else if(a==='wx')addWeather(b.dataset.v);
   else if(a==='seg'){var f=b.dataset.f;setSeg(f,draft[f]===b.dataset.v?'':b.dataset.v);}
   else if(a==='rmPhoto'){draftU('photos',draft.photos,'Remove photo');draft.photos.splice(+b.dataset.ix,1);document.getElementById('thumbs').innerHTML=thumbsHtml(draft.photos,true);}
@@ -546,7 +554,7 @@ app.addEventListener('click',function(e){var b=e.target.closest('[data-act]');if
   else if(a==='delHive'){var h=hive(route.id);if(confirm('Delete "'+h.name+'" and all '+h.inspections.length+' inspection(s)? This cannot be undone.')){var bH=capH([h.id]);state.hives=state.hives.filter(function(x){return x!==h;});if(save())pushH('Delete hive “'+h.name+'”',bH);toast('Hive deleted');go({name:'home'});}}
   else if(a==='delInsp'){if(confirm('Delete this inspection and its photos? This cannot be undone.')){var hv=hive(route.id),bD=capH([hv.id]);hv.inspections=hv.inspections.filter(function(x){return x.id!==route.iid;});if(save())pushH('Delete inspection',bD);toast('Inspection deleted');go({name:'hive',id:route.id});}}
 });
-app.addEventListener('input',function(e){var f=e.target.dataset&&e.target.dataset.f;if(f&&draft&&route.name==='form')draft[f]=e.target.value;});
+app.addEventListener('input',function(e){var f=e.target.dataset&&e.target.dataset.f;if(f&&draft&&route.name==='form'){draft[f]=e.target.value;clearTimeout(adT);adT=setTimeout(storeDraft,600);}});var adT;
 app.addEventListener('change',function(e){if(e.target.id!=='f_photos')return;var files=[].slice.call(e.target.files||[]);e.target.value='';if(!files.length)return;
   var busy=document.getElementById('busy');busy.hidden=false;
   var bP=draft.photos.slice();files.reduce(function(p,f){return p.then(function(){return resize(f,1024,0.7).then(function(d){draft.photos.push(d);},function(){toast('Skipped a file that could not be read as an image.',true);});});},Promise.resolve())
@@ -555,8 +563,8 @@ app.addEventListener('submit',function(e){e.preventDefault();
   if(e.target.id==='hiveForm'){var n=document.getElementById('hName').value.trim();if(!n){toast('Please enter a hive name',true);return;}
     var h={id:uid(),name:n,notes:document.getElementById('hNotes').value.trim(),created:Date.now(),inspections:[]};state.hives.push(h);if(save()){pushH('Add hive “'+n+'”',[{id:h.id,ix:-1,j:null}]);toast('Hive added');go({name:'hive',id:h.id});}}
   else if(e.target.id==='inspForm'){if((draft.step||0)<2)setStep(draft.step+1);else submitInsp();}});
-window.HiveNotes={restartField:restartField,openMicGuide:openMicGuide,openSetup:openSetup,uaKind:uaKind,fixSteps:fixSteps,micBlocked:micBlocked,setHF:setHF,isHF:function(){return hfOn;},resize:resize,validate:validate,importHives:importHives,command:command,getState:function(){return state;},getDraft:function(){return draft;},undo:undoLast,undoStack:function(){return ustack;},KEY:KEY};
-render();
+window.HiveNotes={restartField:restartField,openMicGuide:openMicGuide,openSetup:openSetup,uaKind:uaKind,fixSteps:fixSteps,micBlocked:micBlocked,setHF:setHF,isHF:function(){return hfOn;},resize:resize,validate:validate,importHives:importHives,command:command,getState:function(){return state;},getDraft:function(){return draft;},undo:undoLast,undoStack:function(){return ustack;},KEY:KEY,saveDraft:saveDraftNow};
+var restored=restoreDraft();render();if(restored)toast('Restored your unsaved inspection draft');
 
 hfUI();try{if(localStorage.getItem(HFKEY)==='1')setHF(true,true);}catch(e){}
 })();
