@@ -139,6 +139,9 @@ main{padding-bottom:calc(100px + env(safe-area-inset-bottom))!important}
 ol.setup{padding-left:24px;margin:0}ol.setup li{margin:0 0 12px;color:var(--muted)}ol.setup b{color:var(--text)}
 .rst{min-width:48px;min-height:52px;padding:0;flex:none;font-size:1.4rem;background:transparent;color:var(--amber2);border:2px solid var(--amber)}
 .rst:hover{background:rgba(255,182,39,.12)}
+.undoBtn{min-width:48px;min-height:48px;width:48px;height:48px;padding:0;flex:none;border-radius:50%;font-size:1.5rem;line-height:1;background:transparent;color:var(--amber2);border:2px solid var(--amber)}
+.undoBtn[aria-disabled=true]{opacity:.35;border-color:var(--line);color:var(--muted);cursor:default}
+.undoBtn[hidden]{display:none}
 .rtoast{display:flex;align-items:center;gap:10px;background:var(--card2);color:var(--text);border:2px solid var(--amber)}
 .rtoast .undo{min-height:44px;padding:6px 14px;background:var(--amber);color:var(--amberInk);border-color:var(--amber)}
 </style>
@@ -148,6 +151,7 @@ ol.setup{padding-left:24px;margin:0}ol.setup li{margin:0 0 12px;color:var(--mute
   <div class="logo" aria-hidden="true"><i></i><i></i><i></i></div>
   <div class="brand">Hive Notes</div>
   <button id="backBtn" class="icon" hidden aria-label="Back">&#8592;</button>
+  <button id="undoBtn" type="button" class="undoBtn" hidden aria-disabled="true" aria-label="Undo last change" title="Undo last change">&#8630;</button>
   <button id="helpBtn" class="icon" aria-label="Help and backup" title="Help &amp; backup">?</button>
 </header>
 <main id="app"></main>
@@ -186,7 +190,37 @@ function empty(art,title,msg,btn,act){return '<div class="card empty">'+ART[art]
 /* ---------- views ---------- */
 function go(r){route=r;render();}
 function render(){backBtn.hidden=route.name==='home';var h=({home:vHome,addHive:vAddHive,hive:vHive,form:vForm,insp:vInsp}[route.name]||vHome)();
-  app.innerHTML='<section class="screen">'+h+'</section>';if(route.name==='form')showStep();}
+  app.innerHTML='<section class="screen">'+h+'</section>';if(route.name==='form'){showStep();baseF={};Object.keys(TEXTF).forEach(function(k){baseF[k]=draft[k]||'';});}undoUI();}
+/* ---------- global undo stack ---------- */
+var UKEY='hiveNotes.undo',UMAX=20,UBUDGET=900000,ustack=loadU(),baseF={};
+function loadU(){try{var a=JSON.parse(localStorage.getItem(UKEY));if(Array.isArray(a))return a.filter(function(e){return e&&e.t!=='draft';});}catch(e){}return[];}
+function saveU(){var p=ustack.filter(function(e){return e.t!=='draft';});
+  while(p.length&&JSON.stringify(p).length>UBUDGET)p.shift();
+  for(;;){try{localStorage.setItem(UKEY,JSON.stringify(p));return;}catch(e){if(!p.length){try{localStorage.removeItem(UKEY);}catch(x){}return;}p.shift();}}}
+function undoHtml(){return '<button type="button" class="undoBtn" aria-label="Undo last change" title="Undo last change">&#8630;</button>';}
+function undoUI(){var off=!ustack.length,top=ustack[ustack.length-1];document.querySelectorAll('.undoBtn').forEach(function(b){
+  b.hidden=b.id==='undoBtn'&&route.name==='home'&&!state.hives.length&&!document.querySelector('.overlay');b.setAttribute('aria-disabled',off?'true':'false');
+  b.title=off?'Nothing to undo':'Undo: '+top.label;b.setAttribute('aria-label',b.title);});}
+function capH(ids){return ids.map(function(id){var ix=-1;state.hives.forEach(function(h,i){if(h.id===id)ix=i;});return{id:id,ix:ix,j:ix<0?null:JSON.stringify(state.hives[ix])};});}
+function pushU(e){e.r=JSON.parse(JSON.stringify(route));ustack.push(e);while(ustack.length>UMAX)ustack.shift();if(e.t!=='draft')saveU();undoUI();}
+function pushH(label,items){pushU({t:'hives',label:label,items:items});}
+function dropDraftU(){var n=ustack.length;ustack=ustack.filter(function(e){return e.t!=='draft';});if(n!==ustack.length)undoUI();}
+function undoLast(){var e=ustack.pop();if(!e){undoUI();return;}
+  if(e.t==='draft'){if(!draft||route.name!=='form'){undoUI();return;}draft[e.f]=e.v;var a=document.activeElement;if(a&&a.blur)a.blur();render();toast('Undid: '+e.label);return;}
+  var before=JSON.stringify(state.hives);
+  if(e.t==='all')state.hives=JSON.parse(e.j);
+  else e.items.slice().reverse().forEach(function(it){state.hives=state.hives.filter(function(h){return h.id!==it.id;});if(it.j!=null)state.hives.splice(Math.min(it.ix,state.hives.length),0,JSON.parse(it.j));});
+  if(!save()){state.hives=JSON.parse(before);ustack.push(e);undoUI();return;}
+  saveU();if(route.name==='form'){draft=null;}dropDraftU();
+  var r=e.r||{name:'home'};if(r.name==='form'||r.name==='addHive')r={name:r.id&&hive(r.id)?'hive':'home',id:r.id};
+  if(r.name==='insp'&&!(hive(r.id)&&hive(r.id).inspections.some(function(i){return i.id===r.iid;})))r={name:hive(r.id)?'hive':'home',id:r.id};
+  if(r.name==='hive'&&!hive(r.id))r={name:'home'};
+  document.querySelectorAll('.overlay').forEach(function(o){if(!o.querySelector('.undoBtn'))return;if(e.t!=='all')o.remove();});
+  go(r);toast('Undid: '+e.label);}
+document.addEventListener('click',function(ev){var b=ev.target.closest('.undoBtn');if(!b)return;ev.preventDefault();if(b.getAttribute('aria-disabled')==='true')return;undoLast();});
+function draftU(f,old,label){if(!draft)return;pushU({t:'draft',f:f,v:Array.isArray(old)?old.slice():old,label:label});}
+function commitF(f){if(!draft||route.name!=='form'||!TEXTF[f])return;var v=draft[f]||'',o=baseF[f]||'';if(v===o)return;draftU(f,o,TEXTF[f]+' edit');baseF[f]=v;}
+app.addEventListener('focusout',function(e){var f=e.target.dataset&&e.target.dataset.f;if(f)commitF(f);});
 function vHome(){var n=state.hives.length;
   var s='<h1>Your hives</h1><p class="sub">'+n+' hive'+(n===1?'':'s')+' &middot; ~'+usage()+' KB of ~5 MB used</p><div class="panel">';
   if(!n)s+=empty('hive','No hives yet','Add your first hive to start logging inspections. Tip: tap &#127908; and say &ldquo;add hive&rdquo;.','+ Add your first hive','addHive');
@@ -227,8 +261,8 @@ function resize(file,max,q){return new Promise(function(res,rej){var url=URL.cre
     var x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);res(c.toDataURL('image/jpeg',q));};
   img.onerror=function(){URL.revokeObjectURL(url);rej(new Error('Could not read image'));};img.src=url;});}
 function overlay(title,body,cls){var v=document.createElement('div');v.className='overlay '+(cls||'');v.setAttribute('role','dialog');v.setAttribute('aria-modal','true');
-  v.innerHTML='<div class="ohead"><div class="title" style="flex:1">'+title+'</div><button class="primary" data-close>Close &times;</button></div>'+body;
-  v.addEventListener('click',function(e){if(e.target.closest('[data-close]'))v.remove();});document.body.appendChild(v);return v;}
+  v.innerHTML='<div class="ohead"><div class="title" style="flex:1">'+title+'</div>'+undoHtml()+'<button class="primary" data-close>Close &times;</button></div>'+body;
+  v.addEventListener('click',function(e){if(e.target.closest('[data-close]'))v.remove();});document.body.appendChild(v);undoUI();return v;}
 function viewer(src){var v=overlay('Photo','<img alt="Photo full size">','viewer');v.querySelector('img').src=src;v.querySelector('img').onclick=function(){v.remove();};}
 
 /* ---------- help & backup ---------- */
@@ -254,10 +288,10 @@ function validate(d){if(!d||typeof d!=='object'||!Array.isArray(d.hives))throw n
     return{id:str(h.id)||uid(),name:h.name.trim(),notes:str(h.notes),created:+h.created||Date.now(),inspections:(Array.isArray(h.inspections)?h.inspections:[]).map(function(i){if(!i||typeof i!=='object')throw new Error('Bad inspection in file.');
       return{id:str(i.id)||uid(),created:+i.created||Date.now(),date:/^\d{4}-\d{2}-\d{2}$/.test(i.date)?i.date:today(),weather:str(i.weather),strength:['weak','medium','strong'].indexOf(i.strength)>=0?i.strength:'',queenSeen:['yes','no'].indexOf(i.queenSeen)>=0?i.queenSeen:'',brood:str(i.brood),honey:str(i.honey),pests:str(i.pests),treatments:str(i.treatments),notes:str(i.notes),
         photos:(Array.isArray(i.photos)?i.photos:[]).filter(function(p){return typeof p==='string'&&/^data:image\/(jpeg|png|webp|gif);base64,/.test(p);})};})};});}
-function importHives(hives,mode){var before=JSON.stringify(state);
+function importHives(hives,mode){var before=JSON.stringify(state),bAll=JSON.stringify(state.hives);
   if(mode==='replace')state={hives:hives};
   else hives.forEach(function(h){var ex=hive(h.id);if(!ex){state.hives.push(h);return;}h.inspections.forEach(function(i){if(!ex.inspections.some(function(x){return x.id===i.id;}))ex.inspections.push(i);});});
-  if(save()){toast('Backup imported');go({name:'home'});return true;}state=JSON.parse(before);return false;}
+  if(save()){pushU({t:'all',j:bAll,label:'Import backup'});toast('Backup imported');go({name:'home'});return true;}state=JSON.parse(before);return false;}
 function importFile(file,ov){var r=new FileReader();r.onload=function(){var hives;try{hives=validate(JSON.parse(r.result));}catch(e){toast('Import failed: '+(e instanceof SyntaxError?'file is not valid JSON.':e.message),true);return;}
   var n=hives.reduce(function(a,h){return a+h.inspections.length;},0),msg='Backup contains '+hives.length+' hive(s) and '+n+' inspection(s).\n\n',ok=false;
   if(!state.hives.length){if(confirm(msg+'Import it?'))ok=importHives(hives,'replace');}
@@ -375,7 +409,7 @@ function undoToast(el,old){var o=document.querySelector('.toast');if(o)o.remove(
 function restartField(el){if(!el)return;stopListen();clearField(el);
   if(hfOn){el.focus();hfShow('Hands-free listening','Cleared – speak again');return;}
   if(SR&&!insecure())dictateInto(el);else el.focus();}
-function dictateInto(el){if(!el)return;listen('Dictating into '+(el.placeholder?'the box':'field'),function(t){if(RESTART_RE.test(norm(t))){setTimeout(function(){restartField(el);},50);return;}var v=el.value;el.value=(v&&!/\s$/.test(v)?v+' ':v)+t;el.dispatchEvent(new Event('input',{bubbles:true}));},app.querySelector('.mic[data-target="'+el.id+'"]'));}
+function dictateInto(el){if(!el)return;listen('Dictating into '+(el.placeholder?'the box':'field'),function(t){if(RESTART_RE.test(norm(t))){setTimeout(function(){restartField(el);},50);return;}var v=el.value;el.value=(v&&!/\s$/.test(v)?v+' ':v)+t;el.dispatchEvent(new Event('input',{bubbles:true}));if(el.dataset.f)commitF(el.dataset.f);},app.querySelector('.mic[data-target="'+el.id+'"]'));}
 
 var NUM={zero:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,first:1,second:2,third:3,fourth:4,fifth:5,to:2,too:2,for:4,won:1};
 function norm(s){return String(s).toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(Boolean).map(function(w){return NUM.hasOwnProperty(w)&&w!=='to'&&w!=='for'&&w!=='too'&&w!=='won'?String(NUM[w]):w;}).join(' ');}
@@ -422,15 +456,15 @@ function command(text){var t=norm(text),w=t.split(' ');
     return toast('Didn’t match an option in “'+text+'”. Try “strong”, “queen seen”, “sunny”, “next” or “notes …”.',true);}
 }
 function showStepSoon(){}
-function setSeg(f,v){draft[f]=v;app.querySelectorAll('[data-act=seg][data-f="'+f+'"]').forEach(function(x){x.setAttribute('aria-pressed',x.dataset.v===v);});}
-function addWeather(word){var el=document.getElementById('f_weather'),v=draft.weather||'';if(new RegExp('\\b'+word+'\\b','i').test(v))return;draft.weather=v?v.replace(/[\s,]*$/,'')+', '+word:cap(word);if(el)el.value=draft.weather;}
+function setSeg(f,v){if(draft&&draft[f]!==v)draftU(f,draft[f],cap(f.replace(/([A-Z])/g,' $1').toLowerCase())+' '+(v?'→ '+v:'cleared'));draft[f]=v;app.querySelectorAll('[data-act=seg][data-f="'+f+'"]').forEach(function(x){x.setAttribute('aria-pressed',x.dataset.v===v);});}
+function addWeather(word){var el=document.getElementById('f_weather'),v=draft.weather||'';if(new RegExp('\\b'+word+'\\b','i').test(v))return;commitF('weather');draftU('weather',draft.weather||'','Weather + '+word);draft.weather=v?v.replace(/[\s,]*$/,'')+', '+word:cap(word);if(el)el.value=draft.weather;}
 
 /* ---------- actions ---------- */
 function newInsp(){draft={step:0,date:today(),weather:'',strength:'',queenSeen:'',brood:'',honey:'',pests:'',treatments:'',notes:'',photos:[]};go({name:'form',id:route.id});}
 function confirmDiscard(){return !(draft&&(draft.photos.length||draft.notes||draft.weather||draft.strength||draft.pests))||confirm('Discard this inspection?');}
-function cancelForm(){if(confirmDiscard()){draft=null;go({name:'hive',id:route.id});}}
-function submitInsp(){var hv=hive(route.id),ins=Object.assign({id:uid(),created:Date.now()},draft);delete ins.step;ins.date=ins.date||today();hv.inspections.push(ins);
-  if(save()){draft=null;toast('Inspection saved');go({name:'hive',id:route.id});}}
+function cancelForm(){if(confirmDiscard()){draft=null;dropDraftU();go({name:'hive',id:route.id});}}
+function submitInsp(){var hv=hive(route.id),ins=Object.assign({id:uid(),created:Date.now()},draft);delete ins.step;ins.date=ins.date||today();var bI=capH([hv.id]);hv.inspections.push(ins);
+  if(save()){draft=null;dropDraftU();pushH('Save inspection',bI);toast('Inspection saved');go({name:'hive',id:route.id});}}
 backBtn.onclick=function(){stopListen();if(route.name==='form'){if((draft.step||0)>0)return setStep(draft.step-1);return cancelForm();}
   if(route.name==='hive'||route.name==='addHive')go({name:'home'});else if(route.name==='insp')go({name:'hive',id:route.id});};
 
@@ -486,21 +520,21 @@ app.addEventListener('click',function(e){var b=e.target.closest('[data-act]');if
   else if(a==='save')submitInsp();
   else if(a==='wx')addWeather(b.dataset.v);
   else if(a==='seg'){var f=b.dataset.f;setSeg(f,draft[f]===b.dataset.v?'':b.dataset.v);}
-  else if(a==='rmPhoto'){draft.photos.splice(+b.dataset.ix,1);document.getElementById('thumbs').innerHTML=thumbsHtml(draft.photos,true);}
+  else if(a==='rmPhoto'){draftU('photos',draft.photos,'Remove photo');draft.photos.splice(+b.dataset.ix,1);document.getElementById('thumbs').innerHTML=thumbsHtml(draft.photos,true);}
   else if(a==='view'){var ph=route.name==='form'?draft.photos:curInsp().photos;viewer(ph[+b.dataset.ix]);}
-  else if(a==='delHive'){var h=hive(route.id);if(confirm('Delete "'+h.name+'" and all '+h.inspections.length+' inspection(s)? This cannot be undone.')){state.hives=state.hives.filter(function(x){return x!==h;});save();toast('Hive deleted');go({name:'home'});}}
-  else if(a==='delInsp'){if(confirm('Delete this inspection and its photos? This cannot be undone.')){var hv=hive(route.id);hv.inspections=hv.inspections.filter(function(x){return x.id!==route.iid;});save();toast('Inspection deleted');go({name:'hive',id:route.id});}}
+  else if(a==='delHive'){var h=hive(route.id);if(confirm('Delete "'+h.name+'" and all '+h.inspections.length+' inspection(s)? This cannot be undone.')){var bH=capH([h.id]);state.hives=state.hives.filter(function(x){return x!==h;});if(save())pushH('Delete hive “'+h.name+'”',bH);toast('Hive deleted');go({name:'home'});}}
+  else if(a==='delInsp'){if(confirm('Delete this inspection and its photos? This cannot be undone.')){var hv=hive(route.id),bD=capH([hv.id]);hv.inspections=hv.inspections.filter(function(x){return x.id!==route.iid;});if(save())pushH('Delete inspection',bD);toast('Inspection deleted');go({name:'hive',id:route.id});}}
 });
 app.addEventListener('input',function(e){var f=e.target.dataset&&e.target.dataset.f;if(f&&draft&&route.name==='form')draft[f]=e.target.value;});
 app.addEventListener('change',function(e){if(e.target.id!=='f_photos')return;var files=[].slice.call(e.target.files||[]);e.target.value='';if(!files.length)return;
   var busy=document.getElementById('busy');busy.hidden=false;
-  files.reduce(function(p,f){return p.then(function(){return resize(f,1024,0.7).then(function(d){draft.photos.push(d);},function(){toast('Skipped a file that could not be read as an image.',true);});});},Promise.resolve())
-  .then(function(){var bz=document.getElementById('busy');if(bz)bz.hidden=true;var t=document.getElementById('thumbs');if(t)t.innerHTML=thumbsHtml(draft.photos,true);});});
+  var bP=draft.photos.slice();files.reduce(function(p,f){return p.then(function(){return resize(f,1024,0.7).then(function(d){draft.photos.push(d);},function(){toast('Skipped a file that could not be read as an image.',true);});});},Promise.resolve())
+  .then(function(){if(draft&&draft.photos.length!==bP.length)draftU('photos',bP,'Add photo'+(draft.photos.length-bP.length>1?'s':''));var bz=document.getElementById('busy');if(bz)bz.hidden=true;var t=document.getElementById('thumbs');if(t)t.innerHTML=thumbsHtml(draft.photos,true);});});
 app.addEventListener('submit',function(e){e.preventDefault();
   if(e.target.id==='hiveForm'){var n=document.getElementById('hName').value.trim();if(!n){toast('Please enter a hive name',true);return;}
-    var h={id:uid(),name:n,notes:document.getElementById('hNotes').value.trim(),created:Date.now(),inspections:[]};state.hives.push(h);if(save()){toast('Hive added');go({name:'hive',id:h.id});}}
+    var h={id:uid(),name:n,notes:document.getElementById('hNotes').value.trim(),created:Date.now(),inspections:[]};state.hives.push(h);if(save()){pushH('Add hive “'+n+'”',[{id:h.id,ix:-1,j:null}]);toast('Hive added');go({name:'hive',id:h.id});}}
   else if(e.target.id==='inspForm'){if((draft.step||0)<2)setStep(draft.step+1);else submitInsp();}});
-window.HiveNotes={restartField:restartField,openMicGuide:openMicGuide,openSetup:openSetup,uaKind:uaKind,fixSteps:fixSteps,micBlocked:micBlocked,setHF:setHF,isHF:function(){return hfOn;},resize:resize,validate:validate,importHives:importHives,command:command,getState:function(){return state;},getDraft:function(){return draft;},KEY:KEY};
+window.HiveNotes={restartField:restartField,openMicGuide:openMicGuide,openSetup:openSetup,uaKind:uaKind,fixSteps:fixSteps,micBlocked:micBlocked,setHF:setHF,isHF:function(){return hfOn;},resize:resize,validate:validate,importHives:importHives,command:command,getState:function(){return state;},getDraft:function(){return draft;},undo:undoLast,undoStack:function(){return ustack;},KEY:KEY};
 render();
 
 hfUI();try{if(localStorage.getItem(HFKEY)==='1')setHF(true,true);}catch(e){}
