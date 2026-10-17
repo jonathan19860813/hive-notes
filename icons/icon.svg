@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a3a2d"/><stop offset="1" stop-color="#141a15"/></linearGradient>
+<radialGradient id="glow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffb627" stop-opacity=".28"/><stop offset="1" stop-color="#ffb627" stop-opacity="0"/></radialGradient></defs>
+<rect width="512" height="512" fill="url(#g)"/><circle cx="256" cy="262" r="230" fill="url(#glow)"/>
+<g><polygon points="256.0,200.0 309.7,231.0 309.7,293.0 256.0,324.0 202.3,293.0 202.3,231.0" fill="#ffb627"/><polygon points="371.4,200.0 425.1,231.0 425.1,293.0 371.4,324.0 317.7,293.0 317.7,231.0" fill="#ffcc5c"/><polygon points="140.6,200.0 194.3,231.0 194.3,293.0 140.6,324.0 86.9,293.0 86.9,231.0" fill="#e89a10"/><polygon points="313.7,100.0 367.4,131.0 367.4,193.0 313.7,224.0 260.0,193.0 260.0,131.0" fill="#ffcc5c"/><polygon points="198.3,100.0 252.0,131.0 252.0,193.0 198.3,224.0 144.6,193.0 144.6,131.0" fill="#ffb627"/><polygon points="313.7,300.0 367.4,331.0 367.4,393.0 313.7,424.0 260.0,393.0 260.0,331.0" fill="#e89a10"/><polygon points="198.3,300.0 252.0,331.0 252.0,393.0 198.3,424.0 144.6,393.0 144.6,331.0" fill="#ffb627"/></g><polygon points="256.0,216.0 295.8,239.0 295.8,285.0 256.0,308.0 216.2,285.0 216.2,239.0" fill="none" stroke="#1b1405" stroke-opacity=".35" stroke-width="6"/>
+<path d="M198 420 q0 34 12 44 a12 12 0 1 1 -24 0 q12 -10 12 -44z" fill="#ffb627"/>
+</svg>
