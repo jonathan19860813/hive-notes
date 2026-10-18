@@ -300,6 +300,7 @@ function openHelp(){var v=overlay('Help &amp; backup','<div class="obody">'+
 '<div class="instOnly"><h3>Install app</h3><button type="button" id="hInstall" class="primary instBtn">&#11015; Install Hive Notes</button><p class="meta" id="hInstallMsg"></p></div>'+'<div class="bar" style="padding-top:0;margin-bottom:6px"><button type="button" id="hMic">&#127908; Microphone help</button></div>'+'<h3>Settings</h3><button id="hfSetting" type="button" aria-pressed="'+hfOn+'" style="width:100%">Hands-free mode: '+(hfOn?'On':'Off')+'</button><p class="meta">Hands-free keeps listening so you can speak commands or dictate into the box you tapped, without touching the mic. Uses more battery. Say &ldquo;stop listening&rdquo; or tap the mic to go back to push-to-talk.</p>'+'<h3>1. Open the app on your phone</h3><ol><li>Save the <b>hive-notes.html</b> file to your phone (e.g. from email, Google Drive or iCloud).</li><li>Open it in <b>Chrome</b> (Android) or <b>Safari</b> (iPhone). Tip: open the Files app, tap the file, and choose Chrome/Safari.</li></ol>'+
 '<h3>2. Add it to your home screen</h3><ul><li><b>Android:</b> in Chrome tap the menu <b>&#8942;</b> (top right) &gt; <b>Add to Home screen</b>.</li><li><b>iPhone:</b> in Safari tap <b>Share</b> (square with arrow) &gt; <b>Add to Home Screen</b>.</li></ul>'+
 '<h3>3. Use it anywhere</h3><ul><li>Tap the new icon on your home screen. The app works <b>offline</b> in the apiary &ndash; no signal needed.</li></ul>'+
+'<h3>What you can say &#128483;</h3><div class="card" style="margin:0 0 12px"><ul style="margin:0"><li><b>Move:</b> &ldquo;next&rdquo;, &ldquo;back&rdquo;, &ldquo;save&rdquo; / &ldquo;done&rdquo;, &ldquo;cancel&rdquo;, &ldquo;go home&rdquo; (keeps your draft)</li><li><b>Fill a box:</b> &ldquo;weather sunny and calm&rdquo;, &ldquo;pests a few varroa mites&rdquo;, &ldquo;treatments oxalic acid&rdquo;, &ldquo;notes added a super&rdquo;</li><li><b>Queen:</b> &ldquo;queen seen&rdquo; / &ldquo;queen not seen&rdquo;</li><li><b>Strength:</b> &ldquo;strength strong&rdquo; (or just &ldquo;strong&rdquo;, &ldquo;medium&rdquo;, &ldquo;weak&rdquo;)</li><li><b>Brood:</b> &ldquo;brood solid&rdquo;, &ldquo;brood spotty&rdquo;, &ldquo;brood patchy&rdquo;, &ldquo;no brood&rdquo;</li><li><b>Honey stores:</b> &ldquo;honey good&rdquo;, &ldquo;honey low&rdquo;, &ldquo;honey full&rdquo;</li><li><b>Photos:</b> &ldquo;photo&rdquo;</li><li><b>Fix mistakes:</b> &ldquo;restart&rdquo; (clears the box you&rsquo;re in), &ldquo;undo&rdquo;; &ldquo;stop&rdquo; turns hands-free off</li><li><b>Elsewhere:</b> &ldquo;open Oscar&rdquo;, &ldquo;add inspection&rdquo;, &ldquo;add hive&rdquo;, &ldquo;help&rdquo;</li></ul><p class="meta" style="margin:8px 0 0">Commands work even while a text box is selected; anything else you say is typed into that box. The status line shows <i>Heard: &hellip; &rarr; what it did</i>. Beekeeping words (varroa, brood, queen cells, super, small hive beetle&hellip;) are auto-corrected.</p></div>'+
 '<h3>Voice input &#127908;</h3><ul><li>Tap the mic next to any box to <b>dictate</b> into it.</li><li>Tap the mic in the top bar for <b>commands</b>: &ldquo;open hive 2&rdquo;, &ldquo;add hive&rdquo;, &ldquo;add inspection&rdquo;; in the form: &ldquo;strong&rdquo;, &ldquo;queen seen&rdquo; / &ldquo;no queen&rdquo;, &ldquo;sunny&rdquo;, &ldquo;brood solid&rdquo;, &ldquo;honey full&rdquo;, &ldquo;next&rdquo;, &ldquo;back&rdquo;, &ldquo;save&rdquo;, &ldquo;cancel&rdquo;, or a field name like &ldquo;notes queen cells on frame 3&rdquo;.</li><li>Voice recognition is provided by your browser. In <b>Chrome it usually needs internet</b>; without signal, just type &ndash; everything else still works offline. Allow microphone access when asked. Voice only works when the app is opened from a web link (https), not as a downloaded file &ndash; otherwise use your keyboard&rsquo;s mic key.</li></ul>'+
 '<h3>Troubleshooting</h3><ul><li><b>File won&rsquo;t open / shows code:</b> it opened in a text or file viewer. Open it with Chrome or Safari instead (Files app &gt; tap file &gt; Open with / Share &gt; Safari).</li>'+
 '<li><b>My data seems missing:</b> data is saved only on <b>this phone, in this browser</b>. A different browser, a different copy of the file, private mode, or clearing site/browser data shows an empty app. Go back to the browser you used before, or import a backup.</li>'+
@@ -412,11 +413,11 @@ function listen(label,onFinal,btn){
   if(insecure()){micBlocked(isFileProto()?'file':'insecure');return;}
   var r;try{r=new SR();}catch(e){voiceProblem('Could not start voice input ('+e.message+').',GBOARD);return;}
   rec=r;recBtn=btn;btn.classList.add('on');
-  r.lang=navigator.language||'en-US';r.interimResults=true;r.continuous=false;r.maxAlternatives=3;
+  r.lang=navigator.language||'en-US';r.interimResults=true;r.continuous=false;r.maxAlternatives=5;
   var got='',started=false,failed=false;
   setInd('starting',label,'');
   r.onstart=r.onaudiostart=function(){if(rec!==r)return;started=true;clearTimeout(watchdog);setInd('listening',label);};
-  r.onresult=function(e){if(rec!==r)return;var fin='',tmp='';for(var i=e.resultIndex;i<e.results.length;i++){var t=e.results[i][0].transcript;if(e.results[i].isFinal)fin+=t;else tmp+=t;}
+  r.onresult=function(e){if(rec!==r)return;var fin='',tmp='';for(var i=e.resultIndex;i<e.results.length;i++){var t=e.results[i].isFinal?pickAlt(e.results[i]):e.results[i][0].transcript;if(e.results[i].isFinal)fin+=t;else tmp+=t;}
     if(fin)got=(got?got+' ':'')+fin.trim();setInd(fin?'done':'listening',label,(got||tmp).trim());};
   r.onerror=function(e){if(rec!==r&&e.error==='aborted')return;failed=true;var m=VERR[e.error]||('Voice error: '+e.error+'.');
     if(e.error==='aborted'){endUI();return;}if(e.error==='not-allowed'||e.error==='service-not-allowed'){micBlocked(e.error);return;}voiceProblem(m,e.error==='no-speech'?'':GBOARD);};
@@ -429,6 +430,40 @@ function listen(label,onFinal,btn){
   try{r.start();}catch(e){failed=true;clearTimeout(watchdog);if(e&&e.name==='InvalidStateError'){voiceProblem('Voice was busy – tap the mic again.');}else micBlocked('start');return;}
   checkPermDenied(function(){if(rec===r){failed=true;try{r.abort();}catch(e){}micBlocked('denied');}});clearBlock();
 }
+
+/* ---------- beekeeping vocabulary tuning ---------- */
+var FIXES=[
+ [/\b(barroa|barrow a|barrowa|varrow|varrows|var oa|varoa|verroa|veroa|varroah|ferroa|farroa|vroa|the roa|bar oa)\b/gi,'varroa'],
+ [/\b(queen|swarm|swamp|swan|storm|drone|drown)\s+(sells|sales|cels|sell|seals)\b/gi,function(m,a){a=a.toLowerCase();return ({swamp:'swarm',swan:'swarm',storm:'swarm',drown:'drone'}[a]||a)+' cells';}],
+ [/\bqueen scene\b/gi,'queen seen'],
+ [/\b(soup her|soup a|sue per|sooper|souper)\b/gi,'super'],
+ [/\b(capped|capt|cap|kept)\s+(brewed|brood|brude|broad|brewd)\b/gi,'capped brood'],
+ [/\b(brewed|brude|brewd)\b/gi,'brood'],
+ [/\bbroad(?=\s+(pattern|frames?|nest|box|chamber|solid|spotty|patchy|is|looks)\b)/gi,'brood'],
+ [/\b(solid|spotty|patchy|capped|open|good|no)\s+broad\b/gi,'$1 brood'],
+ [/\b(high|hi|hive|i)\s+(tool|tull|tole)\b/gi,'hive tool'],
+ [/\bsmall\s+(high|hi|hive|five|hide|I)\s+(beetles?|beatles?|beadles?)\b/gi,'small hive beetle'],
+ [/\b(neck tar|necter|nectre|nektar)\b/gi,'nectar'],
+ [/\b(found asian|found nation|foundations)\b/gi,'foundation'],
+ [/\b(lava|lavae|larva e|larvy|larvie|larvay|lavvy)\b/gi,'larvae'],
+ [/\b(eggz|egz|egs)\b/gi,'eggs'],
+ [/^\s*(whether|wetter)\b/i,'weather'],
+ [/^\s*(nodes|knots|note)\b/i,'notes'],
+ [/^\s*(pets|pest)\b/i,'pests'],
+ [/\b(honey stalls|honey stores?|honey store's)\b/gi,'honey stores']
+];
+function fixVocab(t){t=String(t||'');FIXES.forEach(function(f){t=t.replace(f[0],f[1]);});return t;}
+var VOCAB=['varroa','brood','queen','cells','super','hive','tool','capped','beetle','nectar','foundation','swarm','drone','larvae','eggs','honey','stores','strength','strong','weak','medium','solid','spotty','patchy','weather','pests','notes','treatments','next','back','save','done','home','photo','sunny','cloudy','windy','calm','rainy','mites','seen','frames','comb'];
+function vocabScore(t){var w=norm(t).split(' '),s=0;w.forEach(function(x){if(VOCAB.indexOf(x)>=0)s+=1;});if(isCmd(norm(t)))s+=3;return s;}
+function pickAlt(res){var best=null,bs=-1;for(var i=0;i<res.length;i++){var raw=res[i].transcript,f=fixVocab(raw),sc=vocabScore(f)-i*0.5+(f!==raw?0.2:0);if(sc>bs){bs=sc;best=f;}}return best==null?'':best;}
+var FIELDKW=/^(weather|pests?|disease|mites|varroa|treatments?|treated|notes?|comment|date)\b/;
+function isCmd(n){if(!n)return false;
+  if(/^(next|continue|back|previous|go back|save|done|finish|cancel|stop|go home|home|open home|photo|photos|take a? ?photo|add photos?|picture|camera|help|undo|undo last)( inspection| please)?$/.test(n))return true;
+  if(FIELDKW.test(n))return true;
+  if(/^queen\b/.test(n)&&!/^queen cells?\b/.test(n))return true;
+  if(/^(brood|honey|honey stores|stores|strength|colony|colony strength)\b/.test(n))return true;
+  var w=n.split(' ');if(w.length<=3&&w.some(function(x){return ['weak','medium','strong','solid','spotty','patchy'].some(function(o){return sim(x,o)>=0.85;});}))return true;
+  return false;}
 var RESTART_RE=/^(restart|start over|start again|clear( this| that| it)?)$/;
 function clearField(el){var old=el.value;el.value='';el.dispatchEvent(new Event('input',{bubbles:true}));undoToast(el,old);}
 function undoToast(el,old){var o=document.querySelector('.toast');if(o)o.remove();clearTimeout(tt);var t=document.createElement('div');t.className='toast rtoast';t.setAttribute('role','status');
@@ -446,7 +481,7 @@ function lev(a,b){var m=a.length,n=b.length,d=[],i,j;for(i=0;i<=m;i++)d[i]=[i];f
 function sim(a,b){if(!a||!b)return 0;if(a===b)return 1;if(a.indexOf(b)>=0||b.indexOf(a)>=0)return 0.85*Math.min(a.length,b.length)/Math.max(a.length,b.length)+0.15;return 1-lev(a,b)/Math.max(a.length,b.length);}
 function bestMatch(phrase,items,key,min){var p=norm(phrase),best=null,bs=0;items.forEach(function(it){var k=norm(key(it)),s=sim(p,k);var nk=k.replace(/^hive\s+/,''),np=p.replace(/^hive\s+/,'');s=Math.max(s,sim(np,nk));if(s>bs){bs=s;best=it;}});return bs>=(min||0.6)?best:null;}
 function wordHit(words,opt,min){var ow=opt.split(' ');return words.some(function(w,ix){var cand=words.slice(ix,ix+ow.length).join(' ');return sim(cand,opt)>=(min||0.8);});}
-function command(text){var t=norm(text),w=t.split(' ');
+function command(text){text=fixVocab(text);var t=norm(text),w=t.split(' ');
   function has(re){return re.test(t);}
   if(has(/\b(help|install)\b/)){openHelp();return 'Help';}
   if(route.name==='home'||route.name==='hive'||route.name==='insp'){
@@ -463,24 +498,26 @@ function command(text){var t=norm(text),w=t.split(' ');
   if(route.name==='addHive'){if(has(/^(save|done)$/)){app.querySelector('#hiveForm').requestSubmit();return 'Save';}if(has(/^cancel$/)){go({name:'home'});return 'Cancel';}
     var hn=document.getElementById('hName');if(!hn.value){hn.value=text.replace(/^(name|call it)\s+/i,'');return 'Name set';}var hno=document.getElementById('hNotes');hno.value=(hno.value?hno.value+' ':'')+text;return 'Added to notes';}
   if(route.name==='form'){var did=[];
+    if(has(/^(go home|home|open home)$/)){leaveForm({name:'home'});return 'Home (draft saved)';}
+    if(has(/^undo( last)?$/)){undoLast();return 'Undo last';}
     var fields={weather:['weather'],pests:['pests','pest','disease','mites','varroa'],treatments:['treatment','treatments','treated'],notes:['notes','note','comment'],date:['date']};
     for(var f in fields){var kw=fields[f].filter(function(k){return w[0]===k||sim(w[0],k)>=0.8;})[0];if(kw&&!(f==='weather'&&w.length>1&&WEATHER.some(function(x){return t.indexOf(x)>=0;})&&false)){
-      var restT=text.trim().split(/\s+/).slice(1).join(' ');var step=f==='weather'||f==='date'?0:f==='notes'?2:1;setStep(step);var el=document.getElementById('f_'+f);el.focus();
+      var keepAll=/^(varroa|mites|disease)$/.test(kw);var restT=keepAll?text.trim():text.trim().split(/\s+/).slice(1).join(' ').replace(/^(is|are|was|were|:)\s+/i,'');var step=f==='weather'||f==='date'?0:f==='notes'?2:1;setStep(step);var el=document.getElementById('f_'+f);el.focus();
       if(f==='date')return 'Date field';
-      if(restT){el.value=(el.value?el.value.replace(/\s*$/,' '):'')+restT;el.dispatchEvent(new Event('input',{bubbles:true}));return TEXTF[f]+' updated';}
+      if(restT){el.value=(el.value?el.value.replace(/\s*$/,' '):'')+restT;el.dispatchEvent(new Event('input',{bubbles:true}));return TEXTF[f]+': “'+restT+'”';}
       setTimeout(function(){dictateInto(el);},300);return TEXTF[f]+': speak now';}}
     if(has(/^(save|done|finish)( inspection)?$/)){submitInsp();return 'Save';}
     if(has(/^cancel$/)){cancelForm();return 'Cancel';}
-    if(has(/^(next|continue)$/)){setStep((draft.step||0)+1);return 'Next';}
-    if(has(/^(back|previous)$/)){setStep((draft.step||0)-1);return 'Back';}
+    if(has(/^(next|continue)( please)?$/)){setStep((draft.step||0)+1);return 'Next → step '+((draft.step||0)+1)+' '+STEPS[draft.step||0];}
+    if(has(/^(back|previous|go back)$/)){setStep((draft.step||0)-1);return 'Back → step '+((draft.step||0)+1)+' '+STEPS[draft.step||0];}
     if(has(/\b(photo|picture|camera)\b/)){setStep(2);document.getElementById('f_photos').click();return 'Photos';}
-    var honeyCtx=has(/\b(honey|stores|store|stored|food|nectar)\b/),broodCtx=has(/\bbrood\b/);
-    if(has(/\bqueen\b/)){if(has(/\b(no|not|didn t|didnt|missing|none|without)\b/))setSeg('queenSeen','no');else setSeg('queenSeen','yes');did.push('Queen');}
-    if(broodCtx){var bo=BROOD.filter(function(o){return wordHit(w,o.split(' ')[0]);})[0];if(bo){setSeg('brood',bo);did.push('Brood '+bo);}}
-    if(honeyCtx){var ho=HONEY.filter(function(o){return wordHit(w,o);})[0]||(has(/\b(high|lots|plenty|heavy|packed)\b/)?'full':has(/\b(light|little|short|empty|poor)\b/)?'low':has(/\b(ok|okay|decent|fine)\b/)?'good':null);if(ho){setSeg('honey',ho);did.push('Honey '+ho);}}
-    if(!honeyCtx){var so=['weak','medium','strong'].filter(function(o){return wordHit(w,o);})[0];if(so){setSeg('strength',so);did.push(cap(so));}}
-    if(!broodCtx){var bo2=['solid','spotty','patchy'].filter(function(o){return wordHit(w,o,0.85);})[0];if(bo2){setSeg('brood',bo2);did.push('Brood '+bo2);}}
-    var wx=WEATHER.filter(function(o){return wordHit(w,o,0.85);});wx.forEach(addWeather);if(wx.length)did.push('Weather');
+    var honeyCtx=has(/\b(honey|stores|store|stored|food|nectar)\b/),broodCtx=has(/\bbrood\b/);var qcells=has(/\bqueen cells?\b/);
+    if(has(/\bqueen\b/)&&!qcells){if(has(/\b(no|not|didn t|didnt|missing|none|without|never)\b/)){setSeg('queenSeen','no');did.push('Queen: Not seen');}else{setSeg('queenSeen','yes');did.push('Queen: Yes, seen');}}
+    if(broodCtx){var bo=BROOD.filter(function(o){return wordHit(w,o.split(' ')[0]);})[0];if(bo){setSeg('brood',bo);did.push('Brood: '+cap(bo));}}
+    if(honeyCtx){var ho=HONEY.filter(function(o){return wordHit(w,o);})[0]||(has(/\b(high|lots|plenty|heavy|packed)\b/)?'full':has(/\b(light|little|short|empty|poor)\b/)?'low':has(/\b(ok|okay|decent|fine)\b/)?'good':null);if(ho){setSeg('honey',ho);did.push('Honey: '+cap(ho));}}
+    if(!honeyCtx){var so=['weak','medium','strong'].filter(function(o){return wordHit(w,o);})[0];if(so){setSeg('strength',so);did.push('Strength: '+cap(so));}}
+    if(!broodCtx){var bo2=['solid','spotty','patchy'].filter(function(o){return wordHit(w,o,0.85);})[0];if(bo2){setSeg('brood',bo2);did.push('Brood: '+cap(bo2));}}
+    var wx=WEATHER.filter(function(o){return wordHit(w,o,0.85);});wx.forEach(addWeather);if(wx.length)did.push('Weather + '+wx.join(', '));
     if(did.length){showStepSoon();return did.join(', ');}
     return toast('Didn’t match an option in “'+text+'”. Try “strong”, “queen seen”, “sunny”, “next” or “notes …”.',true);}
 }
@@ -545,7 +582,8 @@ if('serviceWorker' in navigator&&(location.protocol==='https:'||/^(localhost|127
   window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(function(){});});}
 /* ---------- hands-free mode ---------- */
 var HFKEY='hiveNotes.handsfree',hfOn=false,hfRec=null,hfErrors=0,hfTimer=null,hfStatus=document.getElementById('hfStatus'),hfBtn=document.getElementById('hfBtn');
-function hfShow(title,heard){hfStatus.classList.toggle('on',hfOn);hfStatus.querySelector('b').textContent=title;if(heard!=null)hfStatus.querySelector('.hd').textContent=heard?'“'+heard+'”':'';}
+function hfShow(title,heard,raw){hfStatus.classList.toggle('on',hfOn);hfStatus.querySelector('b').textContent=title;if(heard!=null)hfStatus.querySelector('.hd').textContent=heard?(raw?heard:'“'+heard+'”'):'';}
+var lastHeard='';function heardMsg(t,did){return 'Heard: “'+t.trim()+'” → '+did;}
 function hfUI(){hfBtn.setAttribute('aria-pressed',hfOn);hfBtn.innerHTML='Hands-free<br>'+(hfOn?'On':'Off');micBtn.classList.toggle('hf',hfOn);micBtn.setAttribute('aria-label',hfOn?'Hands-free on - tap to switch to push-to-talk':'Voice: tap and speak');
   var o=document.getElementById('hfSetting');if(o){o.setAttribute('aria-pressed',hfOn);o.textContent='Hands-free mode: '+(hfOn?'On':'Off');}
   hfShow(hfOn?'Hands-free listening':'Tap to speak','');}
@@ -555,16 +593,18 @@ function setHF(on,quiet){on=!!on;if(on){if(!SR){voiceProblem('Voice input isn’
 function hfStop(){clearTimeout(hfTimer);if(hfRec){var r=hfRec;hfRec=null;try{r.abort();}catch(e){}}}
 function hfSchedule(){clearTimeout(hfTimer);if(!hfOn||document.hidden)return;var d=Math.min(8000,300*Math.pow(2,hfErrors));hfTimer=setTimeout(hfStart,d);}
 function hfField(){var a=document.activeElement;return a&&app.contains(a)&&(a.tagName==='TEXTAREA'||(a.tagName==='INPUT'&&(!a.type||a.type==='text')))?a:null;}
-function hfHandle(t){var el=hfField(),n=norm(t);
-  if(el&&RESTART_RE.test(n)){clearField(el);hfShow('Hands-free listening','Cleared – speak again');return;}
-  if(el&&!/^(next|save|done|back|previous|cancel|stop|finish)( inspection)?$/.test(n)){var v=el.value;el.value=(v&&!/\s$/.test(v)?v+' ':v)+t.trim();el.dispatchEvent(new Event('input',{bubbles:true}));hfShow('Hands-free listening','✓ added: '+t.trim());return;}
+function hfHandle(t){t=fixVocab(t);var el=hfField(),n=norm(t);lastHeard=t;
+  if(el&&RESTART_RE.test(n)){clearField(el);hfShow('Hands-free listening',heardMsg(t,'Cleared box – speak again'),true);return;}
   if(/^(stop|stop listening|push to talk|hands free off)$/.test(n)){setHF(false);return;}
-  var r=command(t);hfShow('Hands-free listening',r?'✓ '+r:t);}
+  if(/^undo( last)?$/.test(n)){undoLast();hfShow('Hands-free listening',heardMsg(t,'Undo last'),true);return;}
+  if(el&&!isCmd(n)){var v=el.value;el.value=(v&&!/\s$/.test(v)?v+' ':v)+t.trim();el.dispatchEvent(new Event('input',{bubbles:true}));var lb=(el.dataset.f&&TEXTF[el.dataset.f])||'box';hfShow('Hands-free listening',heardMsg(t,'added to '+lb),true);return;}
+  if(el&&el.dataset.f)commitF(el.dataset.f);
+  var r=command(t);hfShow('Hands-free listening',heardMsg(t,r?r:'no match – try again'),true);}
 function hfStart(){if(!hfOn||document.hidden||hfRec)return;var r;try{r=new SR();}catch(e){setHF(false,true);voiceProblem('Could not start voice input.',GBOARD);return;}
-  hfRec=r;r.lang=navigator.language||'en-US';r.continuous=true;r.interimResults=true;r.maxAlternatives=1;var fatal=false,gotAny=false,hst=false;
+  hfRec=r;r.lang=navigator.language||'en-US';r.continuous=true;r.interimResults=true;r.maxAlternatives=5;var fatal=false,gotAny=false,hst=false;
   var hwd=setTimeout(function(){if(hfRec===r&&!hst&&hfOn){fatal=true;try{r.abort();}catch(e){}micBlocked('timeout');}},5000);
   r.onstart=function(){hst=true;clearTimeout(hwd);clearBlock();if(hfRec===r)hfShow('Hands-free listening');};
-  r.onresult=function(e){if(hfRec!==r)return;var tmp='';for(var i=e.resultIndex;i<e.results.length;i++){var t=e.results[i][0].transcript;if(e.results[i].isFinal){gotAny=true;hfErrors=0;hfHandle(t);}else tmp+=t;}if(tmp)hfShow('Hands-free listening',tmp.trim()+'…');};
+  r.onresult=function(e){if(hfRec!==r)return;var tmp='';for(var i=e.resultIndex;i<e.results.length;i++){var t=e.results[i][0].transcript;if(e.results[i].isFinal){gotAny=true;hfErrors=0;hfHandle(pickAlt(e.results[i]));}else tmp+=t;}if(tmp)hfShow('Hands-free listening',tmp.trim()+'…');};
   r.onerror=function(e){if(hfRec!==r)return;var er=e.error;
     if(er==='not-allowed'||er==='service-not-allowed'){fatal=true;micBlocked(er);return;}
     if(er==='audio-capture'||er==='language-not-supported'){fatal=true;setHF(false,true);voiceProblem(VERR[er],GBOARD);return;}
@@ -609,7 +649,7 @@ app.addEventListener('submit',function(e){e.preventDefault();
   if(e.target.id==='hiveForm'){var n=document.getElementById('hName').value.trim();if(!n){toast('Please enter a hive name',true);return;}
     var h={id:uid(),name:n,notes:document.getElementById('hNotes').value.trim(),created:Date.now(),inspections:[]};state.hives.push(h);if(save()){pushH('Add hive “'+n+'”',[{id:h.id,ix:-1,j:null}]);toast('Hive added');go({name:'hive',id:h.id});}}
   else if(e.target.id==='inspForm'){if((draft.step||0)<2)setStep(draft.step+1);else submitInsp();}});
-window.HiveNotes={restartField:restartField,openMicGuide:openMicGuide,openSetup:openSetup,uaKind:uaKind,fixSteps:fixSteps,micBlocked:micBlocked,setHF:setHF,isHF:function(){return hfOn;},resize:resize,validate:validate,importHives:importHives,command:command,getState:function(){return state;},getDraft:function(){return draft;},undo:undoLast,undoStack:function(){return ustack;},KEY:KEY,saveDraft:saveDraftNow,exportPdf:exportPdf};
+window.HiveNotes={restartField:restartField,openMicGuide:openMicGuide,openSetup:openSetup,uaKind:uaKind,fixSteps:fixSteps,micBlocked:micBlocked,setHF:setHF,isHF:function(){return hfOn;},resize:resize,validate:validate,importHives:importHives,command:command,getState:function(){return state;},getDraft:function(){return draft;},hfHandle:hfHandle,fixVocab:fixVocab,pickAlt:pickAlt,isCmd:isCmd,undo:undoLast,undoStack:function(){return ustack;},KEY:KEY,saveDraft:saveDraftNow,exportPdf:exportPdf};
 (function(){var o=readDraft();if(o&&!hive(o.hive))clearDraft();})();
 try{history.replaceState({d:0,r:{name:'home'}},'');}catch(e){}render();
 document.querySelectorAll('.homeTap').forEach(function(el){var f=function(){stopListen();if(route.name==='form')leaveForm({name:'home'});else go({name:'home'});};el.onclick=f;el.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();f();}};});
