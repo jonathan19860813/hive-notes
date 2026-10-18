@@ -222,7 +222,7 @@ var state=load(),app=document.getElementById('app'),backBtn=document.getElementB
 var route={name:'home'},draft=null;
 var WEATHER=['sunny','cloudy','overcast','windy','calm','rainy','hot','warm','mild','cool','cold','humid'];
 var BROOD=['solid','spotty','patchy','none seen'],HONEY=['low','medium','good','full'];
-var TEXTF={weather:'Weather',pests:'Pests / disease',treatments:'Treatments',notes:'Notes'};
+var TEXTF={weather:'Degrees Celsius',pests:'Pests / disease',treatments:'Treatments',notes:'Notes'};
 
 function load(){try{var d=JSON.parse(localStorage.getItem(KEY));if(d&&Array.isArray(d.hives))return d;}catch(e){}return{hives:[]};}
 function isQuota(e){return e&&(e.name==='QuotaExceededError'||e.name==='NS_ERROR_DOM_QUOTA_REACHED'||e.code===22||e.code===1014);}
@@ -266,7 +266,7 @@ function capH(ids){return ids.map(function(id){var ix=-1;state.hives.forEach(fun
 function pushU(e){e.r=JSON.parse(JSON.stringify(route));e.sid=SID;e.at=Date.now();ustack.push(e);while(ustack.length>UMAX)ustack.shift();if(e.t!=='draft')saveU();undoUI();}
 function pushH(label,items){pushU({t:'hives',label:label,items:items});}
 function dropDraftU(){var n=ustack.length;ustack=ustack.filter(function(e){return e.t!=='draft';});if(n!==ustack.length)undoUI();}
-function undoLast(){if(route.name==='form'&&draft){toast(plainUndoForm());return;}if(route.name==='addHive'){toast(ahUndo());return;}
+function undoLast(){var ub=undoBox();if(ub){toast(ub);return;}if(route.name==='form'&&draft){toast(plainUndoForm());return;}if(route.name==='addHive'){toast(ahUndo());return;}
   var tp=ustack[ustack.length-1];if(!tp){undoUI();toast('Nothing to undo');return;}
   if(tp.sid!==SID){var when=tp.at?new Date(tp.at).toLocaleString(undefined,{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'an earlier session';askConfirm('Undo “'+tp.label+'” from '+when+'? This was done in an earlier session.','Yes, undo it',undoHiveTop);return;}
   undoHiveTop();}
@@ -286,7 +286,7 @@ function draftU(f,old,label){if(!draft)return;if(f==='photos'){fhPush('photos',{
 /* ---------- per-box undo history (persisted) ---------- */
 var FHKEY='hiveNotes.fieldHist',FHMAX=20,FHBUDGET=200000,FHDAYS=7,SID=Date.now()+'-'+Math.random().toString(36).slice(2,6),fh=loadFH(),cfT={};
 var FNAMES={weather:'Weather',pests:'Pests / disease',treatments:'Treatments',notes:'Notes',date:'Date',strength:'Colony strength',queenSeen:'Queen seen',brood:'Brood pattern',honey:'Honey stores',photos:'Photos'};
-var FWORDS={weather:['weather','conditions'],pests:['pests','pest','varroa','mites','disease','pests and disease'],treatments:['treatments','treatment','treated'],notes:['notes','note','comments','comment'],date:['date'],strength:['strength','colony','colony strength'],queenSeen:['queen','queen seen'],brood:['brood','brood pattern'],honey:['honey','honey stores','stores'],photos:['photos','photo','picture','pictures']};
+var FWORDS={weather:['weather','conditions','celsius','degrees celsius'],pests:['pests','pest','varroa','mites','disease','pests and disease'],treatments:['treatments','treatment','treated'],notes:['notes','note','comments','comment'],date:['date'],strength:['strength','colony','colony strength'],queenSeen:['queen','queen seen'],brood:['brood','brood pattern'],honey:['honey','honey stores','stores'],photos:['photos','photo','picture','pictures']};
 function loadFH(){var o;try{o=JSON.parse(localStorage.getItem(FHKEY));}catch(e){}if(!o||typeof o!=='object'||!o.s)o={s:{}};var now=Date.now();Object.keys(o.s).forEach(function(k){var S=o.s[k];if(!S||!S.h||(S.fin&&now-S.fin>FHDAYS*864e5))delete o.s[k];});return o;}
 function saveFH(){var cur=fhScope();for(var g=0;g<400;g++){var j=JSON.stringify(fh);if(j.length<=FHBUDGET){try{localStorage.setItem(FHKEY,j);return;}catch(e){}}
   var ks=Object.keys(fh.s).filter(function(k){return k!==cur;}).sort(function(a,b){return (fh.s[a].t||0)-(fh.s[b].t||0);});
@@ -327,7 +327,7 @@ function vHive(){var h=hive(route.id);if(!h){route={name:'home'};return vHome();
   return s+'</div><div class="bar"><button class="danger" data-act="delHive" data-say="delete hive|remove hive">Delete hive</button>'+(h.inspections.length?'<button class="pdfBtn" data-act="pdfHive" data-say="save to pdf|pdf|print|export pdf">&#128196; Save to PDF</button>':'')+''+(h.inspections.length?'<button class="primary" data-act="newInsp" data-say="inspection|new inspection|add inspection|start inspection">+ Inspection</button>':'')+'</div>';}
 function seg(field,opts,labels){return '<div class="seg" role="group">'+opts.map(function(o,ix){return '<button type="button" data-act="seg" data-f="'+field+'" data-v="'+o+'" aria-pressed="'+(draft[field]===o)+'">'+(labels?labels[ix]:cap(o))+'</button>';}).join('')+'</div>';}
 function tf(id,ph,ta){return '<label for="f_'+id+'">'+TEXTF[id]+'</label><div class="fr">'+(ta?'<textarea id="f_'+id+'" data-f="'+id+'" placeholder="'+ph+'">'+esc(draft[id])+'</textarea>':'<input id="f_'+id+'" data-f="'+id+'" placeholder="'+ph+'" value="'+esc(draft[id])+'">')+micFor('f_'+id)+'</div>';}
-var STEPS=['Date & strength','Weather','Queen','Brood','Honey stores','Pests','Treatments','Notes','Photos'],LASTSTEP=STEPS.length-1;
+var STEPS=['Date & strength','Degrees Celsius','Queen','Brood','Honey stores','Pests','Treatments','Notes','Photos'],LASTSTEP=STEPS.length-1;
 var FSTEP={date:0,strength:0,weather:1,queenSeen:2,brood:3,honey:4,pests:5,treatments:6,notes:7,photos:8};
 function stp(k,html,hint){return '<div class="step" data-step="'+k+'"'+(k?' hidden':'')+'>'+html+'<p class="hint">'+(hint||'Say an option, or &ldquo;next&rdquo; / &ldquo;back&rdquo;.')+'</p></div>';}
 function vForm(){var h=hive(route.id);
@@ -497,8 +497,8 @@ function listen(label,onFinal,btn,opts){requestWakeLock();opts=opts||{};
     else{endUI(true);voiceProblem('Voice didn’t start – weak signal or the mic is busy. Tap the mic to try again.',GBOARD);resumeHF();}}
   function deliver(g){endUI(true);setInd('done',label,g);var i=ind;setTimeout(function(){if(ind===i){ind.remove();ind=null;}},1500);resumeHF();try{onFinal(g);}catch(err){toast('Error: '+err.message,true);}}
   r.onstart=r.onaudiostart=function(){if(rec!==r)return;started=true;clearTimeout(watchdog);clearBlock();setInd('listening',label);};
-  r.onresult=function(e){if(rec!==r)return;var fin='',tmp='';for(var i=e.resultIndex;i<e.results.length;i++){var t=e.results[i].isFinal?pickAlt(e.results[i]):e.results[i][0].transcript;if(e.results[i].isFinal)fin+=t;else tmp+=t;}
-    if(fin){voiceWorked=true;got=(got?got+' ':'')+fin.trim();}tmp0=tmp.trim();setInd(fin?'done':'listening',label,(got+(tmp0?' '+tmp0:'')).trim());
+  r.onresult=function(e){if(rec!==r)return;var fin='',tmp='';r._f=r._f||[];for(var i=Math.min(e.resultIndex,e.results.length);i<e.results.length;i++){var t=e.results[i].isFinal?pickAlt(e.results[i]):e.results[i][0].transcript;if(e.results[i].isFinal){fin+=t;r._f[i]=t.trim();}else tmp+=t;}
+    if(fin){voiceWorked=true;got=joinFinals(r._f);}tmp0=tmp.trim();setInd(fin?'done':'listening',label,(got+(tmp0?' '+tmp0:'')).trim());
     if(opts.cont){clearTimeout(sil);sil=setTimeout(function(){if(rec===r){try{r.stop();}catch(x){}}},2500);}};
   r.onerror=function(e){if(rec!==r)return;var er=e.error;
     if(er==='aborted'){failed=true;endUI();resumeHF();return;}
@@ -570,7 +570,26 @@ function undoToast(el,old){var o=document.querySelector('.toast');if(o)o.remove(
 function restartField(el){if(!el)return;stopListen();clearField(el);
   if(hfOn){el.focus();hfShow('Hands-free listening','Cleared – speak again');return;}
   if(SR&&!insecure())dictateInto(el);else el.focus();}
-function dictateInto(el){if(!el)return;if(hfOn){el.focus();hfShow('Hands-free listening','Speak – typing into '+((el.dataset.f&&TEXTF[el.dataset.f])||'the box'),true);return;}listen('Dictating into '+(el.placeholder?'the box':'field'),function(t){if(RESTART_RE.test(norm(t))){setTimeout(function(){restartField(el);},50);return;}var v=el.value;el.value=(v&&!/\s$/.test(v)?v+' ':v)+t;el.dispatchEvent(new Event('input',{bubbles:true}));if(el.dataset.f)commitF(el.dataset.f);},app.querySelector('.mic[data-target="'+el.id+'"]'),{cont:true});}
+var vIns={};
+function vWords(x){return norm(x).split(' ').filter(Boolean);}
+function voiceInsert(el,t){t=String(t||'').trim();if(!el||!t)return false;var k=el.id,now=Date.now(),L=vIns[k],v=el.value||'';
+  var tw=vWords(t),fw=vWords(v);
+  if(L&&now-L.at<6000&&fw.length){var lw=vWords(L.t);
+    // exact repeat of the last insertion, or text already at the field tail
+    if(norm(t)===norm(L.t)||(tw.length&&fw.slice(-tw.length).join(' ')===tw.join(' ')))return false;
+    // growing transcript: new text starts with what we just inserted -> keep only the new part
+    if(lw.length&&tw.slice(0,lw.length).join(' ')===lw.join(' ')){var rw=t.split(/\s+/);t=rw.slice(lw.length).join(' ');if(!t)return false;tw=vWords(t);}
+    // longest overlap between field tail and start of new text
+    for(var n=Math.min(tw.length,fw.length);n>=2;n--){if(fw.slice(-n).join(' ')===tw.slice(0,n).join(' ')){t=t.split(/\s+/).slice(n).join(' ');break;}}
+    if(!t.trim())return false;}
+  var f=el.dataset&&el.dataset.f;if(f)commitF(f);if(k==='hName'||k==='hNotes'){ahH[k].push(v);ahT[k]=0;}
+  el.value=(v&&!/\s$/.test(v)?v+' ':v)+t.trim();if(k==='hName'||k==='hNotes'){ahCur[k]=el.value;ahT[k]=Date.now();}el.dispatchEvent(new Event('input',{bubbles:true}));if(k==='hName'||k==='hNotes')ahT[k]=Date.now();if(f)commitF(f);
+  vIns[k]={t:(L&&now-L.at<6000&&k in vIns?((vIns[k].t+' '+t).trim()):t),at:now};vIns[k].t=t;vIns[k].at=now;return true;}
+function undoBox(){var el=null;if(route.name==='form'&&draft&&actT&&TEXTF[actT])el=document.getElementById('f_'+actT);else if(route.name==='addHive'&&(actT==='hName'||actT==='hNotes'))el=document.getElementById(actT);
+  if(!el)return null;if(!el.value)return 'Nothing to undo – '+vtName(actT)+' is empty';var f=el.dataset&&el.dataset.f,k=el.id;if(f)commitF(f);if(k==='hName'||k==='hNotes'){ahH[k].push(el.value);ahT[k]=0;}
+  el.value='';if(f&&draft)draft[f]='';el.dispatchEvent(new Event('input',{bubbles:true}));if(k==='hName'||k==='hNotes'){ahCur[k]='';ahT[k]=Date.now();}if(f)commitF(f);delete vIns[k];if(f==='weather'){wxLock=false;wxSync();applyVT();}return 'Cleared '+vtName(actT);}
+function joinFinals(a){var out=[];a.forEach(function(x){if(!x)return;var nx=norm(x),last=out.length?norm(out[out.length-1]):'';if(!nx)return;if(last&&(nx===last||last.slice(-nx.length)===nx))return;if(last&&nx.indexOf(last)===0){out[out.length-1]=x;return;}var all=norm(out.join(' '));if(all&&nx.indexOf(all)===0){out=[x];return;}out.push(x);});return out.join(' ').trim();}
+function dictateInto(el){if(!el)return;if(hfOn){el.focus();hfShow('Hands-free listening','Speak – typing into '+((el.dataset.f&&TEXTF[el.dataset.f])||'the box'),true);return;}listen('Dictating into '+(el.placeholder?'the box':'field'),function(t){if(RESTART_RE.test(norm(t))){setTimeout(function(){restartField(el);},50);return;}voiceInsert(el,t);},app.querySelector('.mic[data-target="'+el.id+'"]'),{cont:true});}
 
 var NUM={zero:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,first:1,second:2,third:3,fourth:4,fifth:5,to:2,too:2,for:4,won:1};
 function norm(s){return String(s).toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(Boolean).map(function(w){return NUM.hasOwnProperty(w)&&w!=='to'&&w!=='for'&&w!=='too'&&w!=='won'?String(NUM[w]):w;}).join(' ');}
@@ -593,8 +612,8 @@ function command(text){text=fixVocab(text);var t=norm(text),w=t.split(' ');
     if(m){go({name:'hive',id:m.id});return 'Opened '+m.name;}
     return null;}
   if(route.name==='addHive'){if(has(/^(save|done)$/)){app.querySelector('#hiveForm').requestSubmit();return 'Save';}if(has(/^cancel$/)){go({name:'home'});return 'Cancel';}if(has(/^(go home|home|open home|go to home)$/)){go({name:'home'});return 'Home';}if(has(/^(add|new) (a )?hive$/))return 'Already on Add hive';
-    var nm=text.match(/^(?:name|call it|hive name|called)\s+(.+)$/i);if(nm){var hn=document.getElementById('hName');ahH.hName.push(hn.value);hn.value=nm[1].trim();ahCur.hName=hn.value;ahT.hName=0;actT='hName';applyVT();return 'Name: '+hn.value;}
-    var nt=text.match(/^(?:notes?)\s+(.+)$/i);if(nt){var hno=document.getElementById('hNotes');ahH.hNotes.push(hno.value);hno.value=(hno.value?hno.value+' ':'')+nt[1].trim();ahCur.hNotes=hno.value;ahT.hNotes=0;actT='hNotes';applyVT();return 'Added to notes';}
+    var nm=text.match(/^(?:name|call it|hive name|called)\s+(.+)$/i);if(nm){var hn=document.getElementById('hName');ahH.hName.push(hn.value);hn.value=nm[1].trim();ahCur.hName=hn.value;ahT.hName=Date.now();actT='hName';applyVT();return 'Name: '+hn.value;}
+    var nt=text.match(/^(?:notes?)\s+(.+)$/i);if(nt){var hno=document.getElementById('hNotes');voiceInsert(hno,nt[1]);actT='hNotes';applyVT();return 'Added to notes';}
     return null;}
   if(route.name==='form'){var did=[];
     if(has(/^(go home|home|open home)$/)){leaveForm({name:'home'});return 'Home (draft saved)';}
@@ -603,7 +622,7 @@ function command(text){text=fixVocab(text);var t=norm(text),w=t.split(' ');
     for(var f in fields){var kw=fields[f].filter(function(k){return w[0]===k||sim(w[0],k)>=0.8;})[0];if(kw&&!(f==='weather'&&w.length>1&&WEATHER.some(function(x){return t.indexOf(x)>=0;})&&false)){
       var keepAll=/^(varroa|mites|disease)$/.test(kw);var restT=keepAll?text.trim():text.trim().split(/\s+/).slice(1).join(' ').replace(/^(is|are|was|were|:)\s+/i,'');actT=f;setStep(FSTEP[f]);var el=document.getElementById('f_'+f);
       if(f==='date')return 'Date field';
-      if(restT){commitF(f);el.value=(el.value?el.value.replace(/\s*$/,' '):'')+restT;el.dispatchEvent(new Event('input',{bubbles:true}));commitF(f);return TEXTF[f]+': “'+restT+'”';}
+      if(restT){voiceInsert(el,restT);return TEXTF[f]+': “'+restT+'”';}
       setTimeout(function(){dictateInto(el);},300);return TEXTF[f]+': speak now';}}
     if(has(/^(done|finish|save inspection|finish inspection)$/)){submitInsp();return 'Finished – inspection saved';}
     if(has(/^save( draft)?$/)){saveDraftNow();return 'Saved draft ✓';}
@@ -735,7 +754,7 @@ function vtJump(n){var L=vtList();if(!L.length)return null;n=n.replace(/^(go to|
   if(route.name==='addHive'){if(/^(hive )?name$/.test(n))return 'hName';if(/^notes?$/.test(n))return 'hNotes';return null;}
   if(n==='photo'||n==='picture')return null;var f=fieldWord(n);return f&&(FWORDS[f].indexOf(n)>=0||sim(n,FWORDS[f][0])>=0.85)?f:null;}
 function activeTextEl(){var E=vtEls(actT);return E&&E.input?E.input:null;}
-function vtAppend(el,t){if(el.dataset.f)commitF(el.dataset.f);var v=el.value;el.value=(v&&!/\s$/.test(v)?v+' ':v)+t.trim();el.dispatchEvent(new Event('input',{bubbles:true}));if(el.dataset.f)commitF(el.dataset.f);return 'added to '+vtName(actT);}
+function vtAppend(el,t){return voiceInsert(el,t)?'added to '+vtName(actT):'already added – skipped repeat';}
 function vtVoice(n,t){if(route.name!=='form'&&route.name!=='addHive')return null;
   if(/^(next|next box|next one|continue|next please)$/.test(n))return vtMove(1);
   if(/^(previous|back|go back|previous box|previous one|last one)$/.test(n))return vtMove(-1);
@@ -750,7 +769,7 @@ function hfHandle(t){t=fixVocab(t);var _now=Date.now();if(t===hfLastT&&_now-hfLa
     if(RESTART_RE.test(n)){clearField(el);hfShow('Hands-free listening',heardMsg(t,'Cleared box – speak again'),true);return;}
     var wr=wxVoice(t);if(wr){hfShow('Hands-free listening',heardMsg(t,wr),true);return;}
     var bx=n.split(' ').length<=3?matchButton(n,0.9):null;
-    if(!isCmd(n,t)&&!bx&&!vtJump(n)&&!/^(next|next box|next one|next please|previous|previous box|previous one|last one)$/.test(n)&&!/^(stop|stop listening|push to talk|hands free off)$/.test(n)){if(el.dataset.f)commitF(el.dataset.f);var v=el.value;el.value=(v&&!/\s$/.test(v)?v+' ':v)+t.trim();el.dispatchEvent(new Event('input',{bubbles:true}));if(el.dataset.f)commitF(el.dataset.f);var lb=(el.dataset.f&&TEXTF[el.dataset.f])||vtName(el.id)||'box';hfShow('Hands-free listening',heardMsg(t,'added to '+lb),true);return;}
+    if(!isCmd(n,t)&&!bx&&!vtJump(n)&&!/^(next|next box|next one|next please|previous|previous box|previous one|last one)$/.test(n)&&!/^(stop|stop listening|push to talk|hands free off)$/.test(n)){var ins=voiceInsert(el,t);var lb=(el.dataset.f&&TEXTF[el.dataset.f])||vtName(el.id)||'box';hfShow('Hands-free listening',heardMsg(t,ins?'added to '+lb:'already added – skipped repeat'),true);return;}
     if(el.dataset.f)commitF(el.dataset.f);}
   var r=voiceAct(t);hfShow('Hands-free listening',heardMsg(t,r?r:'no match – try a button name, or say “help”'),true);}
 
@@ -860,7 +879,7 @@ function voiceAct(t){t=fixVocab(t);var n=norm(t);if(!n)return null;
     if(yb){cf.querySelector('[data-c="1"]').click();return 'Yes – confirmed';}if(nb){cf.querySelector('[data-c="0"]').click();return 'No – kept';}return 'Say “yes” or “no”';}
   var um=n.match(/^undo (?:the |my )?(.+)$/)||n.match(/^(.+?) undo$/);
   if(um){var tf=fieldWord(um[1]);if(tf){if(route.name!=='form'||!draft){toast('Open the inspection first to undo '+(FNAMES[tf]||tf),true);return 'Open the inspection first';}var m1=fhUndo(tf)||('Nothing to undo for '+FNAMES[tf]);toast(m1);return m1;}}
-  if(n==='undo'){if(route.name==='form'&&draft){var m2=plainUndoForm();toast(m2);return m2;}if(route.name==='addHive'){var m3=ahUndo();toast(m3);return m3;}if(isAddU(ustack[ustack.length-1])){toast('Nothing to undo');return 'Nothing to undo';}var top=ustack[ustack.length-1];undoLast();return !top?'Nothing to undo':top.sid!==SID?'Undo “'+top.label+'”? Say yes or no':'Undo: '+top.label;}
+  if(n==='undo'){var ub=undoBox();if(ub){toast(ub);return ub;}if(route.name==='form'&&draft){var m2=plainUndoForm();toast(m2);return m2;}if(route.name==='addHive'){var m3=ahUndo();toast(m3);return m3;}if(isAddU(ustack[ustack.length-1])){toast('Nothing to undo');return 'Nothing to undo';}var top=ustack[ustack.length-1];undoLast();return !top?'Nothing to undo':top.sid!==SID?'Undo “'+top.label+'”? Say yes or no':'Undo: '+top.label;}
   if(/^(start|begin) (an |the |a )?(apiary )?round$/.test(n))return round?'Round already running':startRound();
   if(/^(end|finish|stop|close) (the |this )?(apiary )?round$/.test(n))return endRound();
   if(round&&/^(skip|skip hive|skip this hive|skip it|skip this one)$/.test(n))return roundSkip();
@@ -913,7 +932,7 @@ function hfStart(){if(!hfOn||document.hidden||hfRec||rec||pttRetry)return;reques
   hfRec=r;r.lang=navigator.language||'en-US';r.continuous=true;r.interimResults=true;r.maxAlternatives=5;var fatal=false,hst=false;
   var hwd=setTimeout(function(){if(hfRec===r&&!hst&&hfOn){hfRec=null;try{r.abort();}catch(e){}hfOther++;hfShow('Reconnecting voice…');hfSchedule();}},5000);
   r.onstart=function(){hst=true;clearTimeout(hwd);if(hfRec!==r)return;hfErrors=0;hfNet=0;hfAud=0;hfOther=0;clearBlock();hfShow('Hands-free listening');};
-  r.onresult=function(e){if(hfRec!==r)return;var tmp='';for(var i=e.resultIndex;i<e.results.length;i++){var t=e.results[i][0].transcript;if(e.results[i].isFinal){hfErrors=0;hfWorked=true;voiceWorked=true;hfHandle(pickAlt(e.results[i]));}else tmp+=t;}if(tmp)hfShow('Hands-free listening',tmp.trim()+'…');};
+  r.onresult=function(e){if(hfRec!==r)return;var tmp='';r._d=r._d||{};for(var i=Math.min(e.resultIndex,e.results.length);i<e.results.length;i++){var t=e.results[i][0].transcript;if(e.results[i].isFinal){hfErrors=0;hfWorked=true;voiceWorked=true;var ft=pickAlt(e.results[i]),nf=norm(ft),pv=r._d[i],lt=(r._lat&&Date.now()-r._lat<4000)?(r._last||''):'';if(!nf)continue;var nw=ft.trim().split(/\s+/),pw=(pv!=null?pv:lt).split(' ').filter(Boolean),grow=pw.length&&nf.split(' ').slice(0,pw.length).join(' ')===pw.join(' ');r._d[i]=nf;r._last=nf;r._lat=Date.now();if(grow&&nf!==pw.join(' ')&&!isCmd(nf,ft)&&!vtJump(nf)){var rest=nw.slice(pw.length).join(' ');if(rest)hfHandle(rest);continue;}hfHandle(ft);}else tmp+=t;}if(tmp)hfShow('Hands-free listening',tmp.trim()+'…');};
   r.onerror=function(e){if(hfRec!==r)return;var er=e.error;
     if(er==='not-allowed'||er==='service-not-allowed'){if(!hfWorked&&!voiceWorked){fatal=true;clearTimeout(hwd);micBlocked(er);return;}permDenied(function(){if(hfOn)micBlocked('denied');});hfOther++;hfShow('Reconnecting voice…');return;}
     if(er==='language-not-supported'){fatal=true;setHF(false,true);voiceProblem(VERR[er],GBOARD);return;}
