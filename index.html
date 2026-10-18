@@ -109,8 +109,8 @@ textarea{min-height:52px;height:84px;resize:none}
 .overlay .obody{flex:1;overflow-y:auto;padding:14px;max-width:720px;width:100%;margin:0 auto}
 .overlay h3{font-size:1.05rem;margin:14px 0 6px;color:var(--amber2)}.overlay ol,.overlay ul{margin:0;padding-left:22px;color:var(--muted)}.overlay li{margin:6px 0}.overlay b{color:var(--text)}
 .viewer{background:rgba(0,0,0,.96)}.viewer img{flex:1;min-height:0;object-fit:contain;width:100%}
-#listen,#oaiInd{position:fixed;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom));z-index:70;max-width:600px;margin:auto;background:#0b0e0c;border:2px solid var(--danger);border-radius:16px;padding:12px 14px;box-shadow:var(--shadow);display:flex;gap:12px;align-items:center}
-#oaiInd .dot{width:16px;height:16px;border-radius:50%;background:var(--danger);flex:none;animation:pulse 1s infinite}#oaiInd[data-state=busy] .dot{background:var(--amber)}
+#listen,#recInd{position:fixed;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom));z-index:70;max-width:600px;margin:auto;background:#0b0e0c;border:2px solid var(--danger);border-radius:16px;padding:12px 14px;box-shadow:var(--shadow);display:flex;gap:12px;align-items:center}
+#recInd .dot{width:16px;height:16px;border-radius:50%;background:var(--danger);flex:none;animation:pulse 1s infinite}#recInd[data-state=busy] .dot{background:var(--amber)}
 #listen .dot{width:16px;height:16px;border-radius:50%;background:var(--danger);flex:none;animation:pulse 1s infinite}
 #listen .heard{color:var(--amber2);font-weight:700}
 .toast{position:fixed;left:12px;right:12px;top:max(70px,calc(env(safe-area-inset-top) + 64px));margin:auto;max-width:600px;background:var(--text);color:#111;font-weight:700;padding:12px 16px;border-radius:14px;z-index:80;box-shadow:var(--shadow);animation:in .2s ease both}
@@ -369,7 +369,7 @@ function overlay(title,body,cls){var v=document.createElement('div');v.className
 function viewer(src){var v=overlay('Photo','<img alt="Photo full size">','viewer');v.querySelector('img').src=src;v.querySelector('img').onclick=function(){v.remove();};}
 
 /* ---------- help & backup ---------- */
-function openHelp(){var v=overlay('Help &amp; backup','<div class="obody">'+oaiCard()+
+function openHelp(){var v=overlay('Help &amp; backup','<div class="obody">'+msCard()+
 '<h3>Backup</h3><p class="meta" style="margin:0 0 8px">Your data lives only in this browser on this phone. Export a backup regularly (it includes photos) and keep it safe &ndash; email it to yourself or save to Drive/iCloud. ~'+usage()+' KB of ~5 MB used.</p><div class="bar" style="padding-top:0"><button data-act="export">&#11015; Export backup</button><label class="btn" for="importFile">&#11014; Import backup</label></div><input id="importFile" type="file" accept="application/json,.json" hidden>'+
 '<div class="instOnly"><h3>Install app</h3><button type="button" id="hInstall" class="primary instBtn">&#11015; Install Hive Notes</button><p class="meta" id="hInstallMsg"></p></div>'+'<div class="bar" style="padding-top:0;margin-bottom:6px"><button type="button" id="hMic">&#127908; Microphone help</button></div>'+'<h3>Settings</h3><button id="hfSetting" type="button" aria-pressed="'+hfOn+'" style="width:100%">Hands-free mode: '+(hfOn?'On':'Off')+'</button><p class="meta">Hands-free keeps listening so you can speak commands or dictate into the box you tapped, without touching the mic. Uses more battery. Say &ldquo;stop listening&rdquo; or tap the mic to go back to push-to-talk.</p>'+'<h3>1. Open the app on your phone</h3><ul><li>Save the <b>hive-notes.html</b> file to your phone (e.g. from email, Google Drive or iCloud).</li><li>Open it in <b>Chrome</b> (Android) or <b>Safari</b> (iPhone). Tip: open the Files app, tap the file, and choose Chrome/Safari.</li></ul>'+
 '<h3>2. Add it to your home screen</h3><ul><li><b>Android:</b> in Chrome tap the menu <b>&#8942;</b> (top right) &gt; <b>Add to Home screen</b>.</li><li><b>iPhone:</b> in Safari tap <b>Share</b> (square with arrow) &gt; <b>Add to Home Screen</b>.</li></ul>'+
@@ -382,7 +382,7 @@ function openHelp(){var v=overlay('Help &amp; backup','<div class="obody">'+oaiC
 '<li><b>Mic doesn&rsquo;t work:</b> phones block the microphone when the app is opened <b>as a file</b> (from Downloads). Voice needs the app opened from a <b>web link (https)</b>. Also allow microphone permission and check internet. Easiest alternative: tap a text box and use the <b>mic key on your keyboard</b> (e.g. Gboard voice typing) &ndash; it works everywhere.</li>'+
 '<li><b>&ldquo;Storage full&rdquo;:</b> export a backup, then delete old inspections or photos.</li></ul></div>');
   v.addEventListener('click',function(e){if(e.target.closest('[data-act=export]'))exportData();if(e.target.closest('#hfSetting'))setHF(!hfOn);if(e.target.closest('#hInstall'))doInstall(v);if(e.target.closest('#hMic'))openMicGuide(isFileProto()?'file':uaKind());});
-  oaiWire(v);installUI(v);v.querySelector('#importFile').addEventListener('change',function(e){var f=e.target.files&&e.target.files[0];e.target.value='';if(f)importFile(f,v);});}
+  msWire(v);installUI(v);v.querySelector('#importFile').addEventListener('change',function(e){var f=e.target.files&&e.target.files[0];e.target.value='';if(f)importFile(f,v);});}
 function exportData(){var data={app:'hive-notes',version:1,exported:new Date().toISOString(),hives:state.hives};
   var blob=new Blob([JSON.stringify(data)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='hive-notes-backup-'+today()+'.json';document.body.appendChild(a);a.click();
   setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1000);toast('Backup downloaded');}
@@ -593,7 +593,7 @@ function undoToast(el,old){var o=document.querySelector('.toast');if(o)o.remove(
   tt=setTimeout(function(){t.remove();},5000);}
 function restartField(el){if(!el)return;stopListen();clearField(el);
   if(hfOn){el.focus();hfShow('Hands-free listening','Cleared – speak again');return;}
-  if((SR||oaiReady())&&!insecure())dictateInto(el);else el.focus();}
+  if((SR||msUse())&&!insecure())dictateInto(el);else el.focus();}
 var vIns={};
 function vWords(x){return norm(x).split(' ').filter(Boolean);}
 function vTidy(t,prev){t=t.replace(/\s*\b(full stop|period)\b/gi,'.').replace(/\s*\bcomma\b/gi,',').replace(/\s*\bquestion mark\b/gi,'?').replace(/\s*\b(exclamation mark)\b/gi,'!').replace(/\s*\b(new line|next line|new paragraph)\b\s*/gi,'\n').replace(/\bi\b/g,'I').replace(/([.!?]\s+|\n)([a-z])/g,function(m,a,b){return a+b.toUpperCase();});if(!/\S/.test(prev||'')||/[.!?\n]\s*$/.test(prev||''))t=t.replace(/^\s*([a-z])/,function(m,a){return a.toUpperCase();});return t;}
@@ -615,64 +615,70 @@ function undoBox(){var el=null;if(route.name==='form'&&draft&&actT&&TEXTF[actT])
   el.value='';if(f&&draft)draft[f]='';el.dispatchEvent(new Event('input',{bubbles:true}));if(k==='hName'||k==='hNotes'){ahCur[k]='';ahT[k]=Date.now();}if(f)commitF(f);delete vIns[k];if(f==='weather'){wxLock=false;wxSync();applyVT();}return 'Cleared '+vtName(actT);}
 function joinFinals(a){var out=[];a.forEach(function(x){if(!x)return;var nx=norm(x),last=out.length?norm(out[out.length-1]):'';if(!nx)return;if(last&&(nx===last||last.slice(-nx.length)===nx))return;if(last&&nx.indexOf(last)===0){out[out.length-1]=x;return;}var all=norm(out.join(' '));if(all&&nx.indexOf(all)===0){out=[x];return;}out.push(x);});return out.join(' ').trim();}
 
-/* ---------- Better dictation (OpenAI, optional, user's own key) ---------- */
-var OAI_K='hiveNotes.oaiKey',OAI_ON='hiveNotes.oaiOn',OAI_URL='https://api.openai.com/v1/audio/transcriptions';
-var OAI_MODEL='gpt-transcribe',OAI_FALLBACK_MODEL='gpt-4o-transcribe';
-var OAI_PROMPT='Beekeeping hive inspection notes spoken by a beekeeper in South Africa. Terms: varroa mites, brood, capped brood, queen cells, swarm cells, supersedure, drone comb, small hive beetle, wax moth, chalkbrood, foulbrood, nectar, pollen, propolis, super, brood box, queen excluder, nuc, frames, foundation, oxalic acid, Apivar, requeen, laying worker.';
-var OAI_KW=['varroa','brood','capped brood','queen cells','swarm cells','supersedure','drone comb','small hive beetle','wax moth','chalkbrood','foulbrood','nectar','pollen','propolis','super','brood box','queen excluder','nuc','frames','foundation','oxalic acid','Apivar','requeen','laying worker'];
-function oaiKey(){try{return localStorage.getItem(OAI_K)||'';}catch(e){return '';}}
-function oaiOn(){try{return localStorage.getItem(OAI_ON)==='1'&&!!oaiKey();}catch(e){return false;}}
-function oaiCan(){return !!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&window.MediaRecorder&&window.fetch);}
-function oaiReady(){return oaiOn()&&oaiCan()&&navigator.onLine!==false&&!insecure();}
-function oaiCard(){var k=oaiKey(),on=oaiOn();return '<h3>Better dictation (OpenAI) &#10024;</h3><div class="card" id="oaiCard" style="margin:0 0 12px"><p class="meta" style="margin:0 0 8px">Optional. Uses your own OpenAI key for more accurate dictation when you tap the &#127908; next to a box (Notes, Pests, Treatments, hive name/notes). Commands and hands-free still use the built-in voice. About US$0.0045 per minute of speech, billed to your OpenAI account. The key is stored only on this phone.</p>'+
- '<label for="oaiKeyIn">OpenAI API key</label><input id="oaiKeyIn" type="password" autocomplete="off" spellcheck="false" placeholder="sk-…" value="'+esc(k)+'">'+
- '<label class="lbl" style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" id="oaiOnIn" style="width:auto;min-height:0"'+(on?' checked':'')+'> Use OpenAI for dictation</label>'+
- '<div class="bar" style="padding-top:6px"><button type="button" id="oaiSave" class="primary">Save</button><button type="button" id="oaiTest">Test key</button><button type="button" id="oaiDel" class="danger">Remove key</button></div><p class="meta" id="oaiMsg" style="margin:6px 0 0">'+(on?'On &ndash; dictation uses OpenAI.':'Off &ndash; using built-in voice.')+'</p></div>';}
-function oaiWire(v){var c=v.querySelector('#oaiCard');if(!c)return;var ki=c.querySelector('#oaiKeyIn'),oi=c.querySelector('#oaiOnIn'),m=c.querySelector('#oaiMsg');
- function sv(){var k=ki.value.trim();try{if(k)localStorage.setItem(OAI_K,k);else localStorage.removeItem(OAI_K);localStorage.setItem(OAI_ON,oi.checked&&k?'1':'0');}catch(e){}oi.checked=oaiOn();m.textContent=oaiOn()?'On – dictation uses OpenAI.':'Off – using built-in voice.';}
- c.querySelector('#oaiSave').onclick=function(){if(oi.checked&&!ki.value.trim()){m.textContent='Paste a key first.';return;}sv();toast(oaiOn()?'Better dictation on':'Better dictation off');};
- oi.onchange=function(){if(oi.checked&&!ki.value.trim()){m.textContent='Paste a key first.';oi.checked=false;return;}sv();};
- c.querySelector('#oaiDel').onclick=function(){ki.value='';oi.checked=false;try{localStorage.removeItem(OAI_K);localStorage.setItem(OAI_ON,'0');}catch(e){}m.textContent='Key removed – using built-in voice.';};
- c.querySelector('#oaiTest').onclick=function(){var k=ki.value.trim();if(!k){m.textContent='Paste a key first.';return;}m.textContent='Testing…';
-  fetch('https://api.openai.com/v1/models/'+OAI_MODEL,{headers:{Authorization:'Bearer '+k},cache:'no-store'}).then(function(r){m.textContent=r.ok?'Key works ✓ (model '+OAI_MODEL+')':r.status===401?'Key rejected (401) – check it was copied fully.':r.status===404?'Key works, but '+OAI_MODEL+' isn’t available – will use '+OAI_FALLBACK_MODEL+'.':r.status===429?'Key OK but out of credit / rate limited (429).':'Problem: HTTP '+r.status;}).catch(function(){m.textContent='No connection to OpenAI – check internet.';});};}
-var oaiCur=null;
-function oaiShow(state,msg){var d=document.getElementById('oaiInd');if(!d){d=document.createElement('div');d.id='oaiInd';d.setAttribute('role','status');d.setAttribute('aria-live','polite');d.innerHTML='<span class="dot"></span><div class="grow"><b class="st"></b><div class="meta msg"></div></div><button type="button" class="danger" style="min-height:48px">Stop</button>';d.querySelector('button').onclick=function(){if(oaiCur)oaiCur.stop();else d.remove();};document.body.appendChild(d);}
- d.dataset.state=state;d.querySelector('.st').textContent=state==='busy'?'Transcribing…':'Listening (OpenAI)…';d.querySelector('.msg').textContent=msg||'';d.querySelector('button').hidden=state==='busy';}
-function oaiHide(){var d=document.getElementById('oaiInd');if(d)d.remove();}
-function oaiFallback(el,why){toast(why+' – using built-in voice',true);oaiHide();googleDictate(el);}
-function oaiDictate(el){if(oaiCur){oaiCur.stop();return;}if(rec){stopListen();}
- var paused=false;if(hfOn||hfRec){paused=hfOn;hfStop();}
+/* ---------- Offline dictation (optional): Moonshine Base (MIT) via Transformers.js (Apache-2.0), on the phone ---------- */
+try{localStorage.removeItem('hiveNotes.oaiKey');localStorage.removeItem('hiveNotes.oaiOn');}catch(e){}
+var MS_ON='hiveNotes.msOn',MS_OK='hiveNotes.msReady',MS_LIB='https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.1/dist/transformers.min.js',MS_MODEL='onnx-community/moonshine-base-ONNX',MS_DTYPE='q8',MS_MB=95;
+var MS_W="import {pipeline,env} from '"+MS_LIB+"';env.allowLocalModels=false;env.useBrowserCache=true;let p=null,lp=null;"+
+ "async function load(){if(p)return p;if(!lp)lp=pipeline('automatic-speech-recognition','"+MS_MODEL+"',{device:'wasm',dtype:'"+MS_DTYPE+"',progress_callback:x=>{if(x.status==='progress')self.postMessage({t:'prog',f:x.file,l:x.loaded||0,n:x.total||0});}}).then(r=>p=r).catch(e=>{lp=null;throw e;});return lp;}"+
+ "self.onmessage=async e=>{const m=e.data;try{if(m.t==='load'){await load();self.postMessage({t:'ready'});}else if(m.t==='run'){const pp=await load();const t0=performance.now();const r=await pp(m.a);self.postMessage({t:'text',id:m.id,text:(r&&r.text)||'',ms:performance.now()-t0});}}catch(err){self.postMessage({t:'err',id:m.id,e:String(err&&err.message||err)});}};";
+var ms={w:null,ready:false,loading:null,prog:{},cb:{},seq:0,onprog:null};
+function msOn(){try{return localStorage.getItem(MS_ON)==='1';}catch(e){return false;}}
+function msHave(){try{return localStorage.getItem(MS_OK)==='1';}catch(e){return false;}}
+function msCan(){return !!(window.Worker&&window.MediaRecorder&&navigator.mediaDevices&&navigator.mediaDevices.getUserMedia&&(window.AudioContext||window.webkitAudioContext)&&window.OfflineAudioContext&&window.WebAssembly);}
+function msWorker(){if(ms.w)return ms.w;var u=URL.createObjectURL(new Blob([MS_W],{type:'text/javascript'}));ms.w=new Worker(u,{type:'module'});
+ ms.w.onmessage=function(e){var d=e.data;if(d.t==='prog'){ms.prog[d.f]=d;if(ms.onprog)ms.onprog(msPct());return;}if(d.t==='ready'){ms.ready=true;try{localStorage.setItem(MS_OK,'1');}catch(x){}var r=ms.cb.load;ms.cb.load=null;if(r)r.res();return;}
+  var c=ms.cb[d.id]||ms.cb.load;if(!c)return;if(ms.cb[d.id])delete ms.cb[d.id];else ms.cb.load=null;if(d.t==='err')c.rej(new Error(d.e));else c.res(d);};
+ ms.w.onerror=function(e){var c=ms.cb.load;ms.cb.load=null;ms.loading=null;try{ms.w.terminate();}catch(x){}ms.w=null;if(c)c.rej(new Error(e.message||'worker failed'));};return ms.w;}
+function msPct(){var l=0,n=0;Object.keys(ms.prog).forEach(function(k){l+=ms.prog[k].l;n+=ms.prog[k].n;});return n?Math.min(100,Math.round(l/n*100)):0;}
+function msLoad(){if(ms.ready)return Promise.resolve();if(ms.loading)return ms.loading;ms.loading=new Promise(function(res,rej){ms.cb.load={res:res,rej:rej};msWorker().postMessage({t:'load'});}).catch(function(e){ms.loading=null;throw e;});return ms.loading;}
+function msRun(a){return msLoad().then(function(){return new Promise(function(res,rej){var id=++ms.seq;ms.cb[id]={res:res,rej:rej};ms.w.postMessage({t:'run',a:a,id:id},[a.buffer]);});});}
+function msForget(){try{localStorage.removeItem(MS_OK);localStorage.setItem(MS_ON,'0');}catch(e){}if(ms.w){try{ms.w.terminate();}catch(e){}}ms.w=null;ms.ready=false;ms.loading=null;ms.prog={};
+ var p=[];if(window.caches){p.push(caches.delete('transformers-cache'));p.push(caches.delete('hn-lib-v1'));}return Promise.all(p).catch(function(){});}
+function msUse(){if(!msCan()||!msHave()&&!msOn())return false;if(msOn())return true;return navigator.onLine===false&&msHave();}
+function msToBlob16k(blob){return blob.arrayBuffer().then(function(buf){var AC=window.AudioContext||window.webkitAudioContext,ac=new AC();return ac.decodeAudioData(buf).then(function(ab){try{ac.close();}catch(e){}var n=Math.max(1,Math.ceil(ab.duration*16000)),oc=new OfflineAudioContext(1,n,16000),s=oc.createBufferSource();s.buffer=ab;s.connect(oc.destination);s.start();return oc.startRendering();}).then(function(r){return r.getChannelData(0);});});}
+function msCard(){var on=msOn(),have=msHave();return '<h3>Offline dictation &#128246;</h3><div class="card" id="msCard" style="margin:0 0 12px"><p class="meta" style="margin:0 0 8px">Optional. Dictates into boxes (Notes, Pests, Treatments, hive name/notes) on this phone with no internet. Downloads about '+MS_MB+'&nbsp;MB once &ndash; use Wi-Fi. Without it, dictation uses the built-in voice (needs signal). Once downloaded it is used automatically when there&rsquo;s no signal.</p>'+
+ '<label class="lbl" style="display:flex;gap:8px;align-items:center;margin-top:0"><input type="checkbox" id="msOnIn" style="width:auto;min-height:0"'+(on?' checked':'')+'> Always use offline dictation for boxes</label>'+
+ '<div class="bar" style="padding-top:6px"><button type="button" id="msDl" class="primary">'+(have?'Downloaded &#10003;':'Download (~'+MS_MB+' MB)')+'</button><button type="button" id="msDel" class="danger"'+(have?'':' hidden')+'>Delete download</button></div>'+
+ '<p class="meta" id="msMsg" style="margin:6px 0 0">'+(have?(on?'On &ndash; boxes use offline dictation.':'Downloaded &ndash; used when there&rsquo;s no signal.'):'Not downloaded.')+'</p>'+
+ '<p class="meta" style="margin:6px 0 0;font-size:.75rem">Uses Moonshine Base speech model &copy; Moonshine AI (MIT License) and Transformers.js &copy; Hugging Face (Apache License 2.0), with ONNX Runtime &copy; Microsoft (MIT License).</p></div>';}
+function msWire(v){var c=v.querySelector('#msCard');if(!c)return;var oi=c.querySelector('#msOnIn'),m=c.querySelector('#msMsg'),dl=c.querySelector('#msDl'),del=c.querySelector('#msDel');
+ function stat(){var on=msOn(),have=msHave();dl.textContent=have?'Downloaded ✓':'Download (~'+MS_MB+' MB)';del.hidden=!have;m.textContent=have?(on?'On – boxes use offline dictation.':'Downloaded – used when there’s no signal.'):'Not downloaded.';}
+ function get(){if(!msCan()){m.textContent='This browser can’t run offline dictation.';return Promise.reject();}if(navigator.onLine===false){m.textContent='Connect to Wi-Fi to download.';return Promise.reject();}
+  dl.disabled=true;m.textContent='Downloading… 0% – keep this open (Wi-Fi recommended)';ms.onprog=function(p){m.textContent='Downloading… '+p+'% – keep this open (Wi-Fi recommended)';};
+  return msLoad().then(function(){ms.onprog=null;dl.disabled=false;try{if(window.caches)caches.open('hn-lib-v1').then(function(cc){cc.add(MS_LIB).catch(function(){});});}catch(e){}stat();toast('Offline dictation ready');}).catch(function(e){ms.onprog=null;dl.disabled=false;m.textContent='Download failed – '+(e&&e.message?e.message:'try again on Wi-Fi');throw e;});}
+ dl.onclick=function(){if(msHave()&&ms.ready)return;get().catch(function(){});};
+ oi.onchange=function(){try{localStorage.setItem(MS_ON,oi.checked?'1':'0');}catch(e){}if(oi.checked&&!msHave()){get().catch(function(){oi.checked=false;try{localStorage.setItem(MS_ON,'0');}catch(e){}stat();});}else stat();};
+ del.onclick=function(){msForget().then(function(){oi.checked=false;stat();toast('Offline dictation removed');});};}
+var msCur=null;
+function msShow(state,msg){var d=document.getElementById('recInd');if(!d){d=document.createElement('div');d.id='recInd';d.setAttribute('role','status');d.setAttribute('aria-live','polite');d.innerHTML='<span class="dot"></span><div class="grow"><b class="st"></b><div class="meta msg"></div></div><button type="button" class="danger" style="min-height:48px">Stop</button>';d.querySelector('button').onclick=function(){if(msCur)msCur.stop();else d.remove();};document.body.appendChild(d);}
+ d.dataset.state=state;d.querySelector('.st').textContent=state==='busy'?'Transcribing on phone…':'Listening (offline)…';d.querySelector('.msg').textContent=msg||'';d.querySelector('button').hidden=state==='busy';}
+function msHide(){var d=document.getElementById('recInd');if(d)d.remove();}
+function msFallback(el,why){msHide();if(navigator.onLine===false){toast(why+' – no signal for built-in voice',true);el.focus();return;}toast(why+' – using built-in voice',true);googleDictate(el);}
+function msDictate(el){if(msCur){msCur.stop();return;}if(rec){stopListen();}
+ var paused=false;if(hfOn||hfRec){paused=hfOn;hfStop();}msLoad().catch(function(){});
  var btn=app.querySelector('.mic[data-target="'+el.id+'"]');
  navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}}).then(function(stream){
   var types=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus'],mt=types.filter(function(t){try{return MediaRecorder.isTypeSupported(t);}catch(e){return false;}})[0]||'';
-  var mr;try{mr=mt?new MediaRecorder(stream,{mimeType:mt}):new MediaRecorder(stream);}catch(e){stream.getTracks().forEach(function(t){t.stop();});return oaiFallback(el,'Recorder not available');}
+  var mr;try{mr=mt?new MediaRecorder(stream,{mimeType:mt}):new MediaRecorder(stream);}catch(e){stream.getTracks().forEach(function(t){t.stop();});return msFallback(el,'Recorder not available');}
   var chunks=[],ac=null,an=null,buf=null,spoke=false,lastLoud=Date.now(),t0=Date.now(),iv=null,done=false;
   try{var AC=window.AudioContext||window.webkitAudioContext;ac=new AC();var src=ac.createMediaStreamSource(stream);an=ac.createAnalyser();an.fftSize=1024;src.connect(an);buf=new Float32Array(an.fftSize);}catch(e){an=null;}
   function stop(){if(done)return;done=true;clearInterval(iv);try{if(mr.state!=='inactive')mr.stop();}catch(e){}}
-  oaiCur={stop:stop};if(btn)btn.classList.add('on');oaiShow('rec','Speak now – stops after a pause, or tap Stop');
+  msCur={stop:stop};if(btn)btn.classList.add('on');msShow('rec','Speak now – stops after a pause, or tap Stop');
   iv=setInterval(function(){var now=Date.now();if(an){an.getFloatTimeDomainData(buf);var sq=0;for(var i=0;i<buf.length;i++)sq+=buf[i]*buf[i];var rms=Math.sqrt(sq/buf.length);if(rms>0.02){spoke=true;lastLoud=now;}}
-   if(spoke&&now-lastLoud>1500)stop();else if(!spoke&&now-t0>10000)stop();else if(now-t0>180000)stop();},100);
+   if(spoke&&now-lastLoud>1500)stop();else if(!spoke&&now-t0>10000)stop();else if(now-t0>120000)stop();},100);
   mr.ondataavailable=function(e){if(e.data&&e.data.size)chunks.push(e.data);};
-  mr.onstop=function(){stream.getTracks().forEach(function(t){t.stop();});try{ac&&ac.close();}catch(e){}oaiCur=null;if(btn)btn.classList.remove('on');
-   var blob=new Blob(chunks,{type:mr.mimeType||mt||'audio/webm'});
-   var resume=function(){if(paused&&hfOn){hfErrors=0;hfStart();}};
-   if(!spoke&&an){oaiHide();toast('Didn’t hear anything – tap the mic and try again');resume();return;}
-   if(!blob.size){oaiHide();resume();return;}
-   oaiShow('busy','Sending '+Math.max(1,Math.round((Date.now()-t0)/1000))+' s of audio');
-   oaiSend(blob,OAI_MODEL).then(function(txt){oaiHide();txt=fixVocab(String(txt||'').trim());if(!txt){toast('Nothing recognised – try again');resume();return;}
+  mr.onstop=function(){stream.getTracks().forEach(function(t){t.stop();});try{ac&&ac.close();}catch(e){}msCur=null;if(btn)btn.classList.remove('on');
+   var blob=new Blob(chunks,{type:mr.mimeType||mt||'audio/webm'}),resume=function(){if(paused&&hfOn){hfErrors=0;hfStart();}};
+   if(!spoke&&an){msHide();toast('Didn’t hear anything – tap the mic and try again');resume();return;}
+   if(!blob.size){msHide();resume();return;}
+   msShow('busy',ms.ready?'':'Loading speech model…');var tt=Date.now();
+   msToBlob16k(blob).then(msRun).then(function(r){msHide();var txt=fixVocab(String(r.text||'').trim());window.__msLast={ms:Date.now()-tt,run:r.ms,text:txt};if(!txt){toast('Nothing recognised – try again');resume();return;}
      if(RESTART_RE.test(norm(txt))){restartField(el);resume();return;}
      if(document.body.contains(el)){var ok=voiceInsert(el,txt);toast(ok?'Added: “'+(txt.length>60?txt.slice(0,60)+'…':txt)+'”':'Already added – skipped repeat');}resume();})
-   .catch(function(err){resume();var st=err&&err.status;oaiFallback(el,st===401?'OpenAI key rejected':st===429?'OpenAI limit / no credit':st?'OpenAI error '+st:'No connection to OpenAI');});};
+   .catch(function(err){resume();msFallback(el,'Offline dictation problem');});};
   try{mr.start(1000);}catch(e){stop();}
- }).catch(function(e){if(paused&&hfOn){hfStart();}var n=e&&e.name;if(n==='NotAllowedError'||n==='SecurityError'){micBlocked('denied');return;}oaiFallback(el,'Mic not available for OpenAI');});}
-function oaiSend(blob,model){var fd=new FormData(),ext=/mp4/.test(blob.type)?'m4a':/ogg/.test(blob.type)?'ogg':'webm';fd.append('file',blob,'dictation.'+ext);fd.append('model',model);fd.append('prompt',OAI_PROMPT);
- if(model==='gpt-transcribe'){OAI_KW.forEach(function(k){fd.append('keywords[]',k);});fd.append('languages[]','en');}else fd.append('language','en');
- fd.append('response_format','json');
- return fetch(OAI_URL,{method:'POST',headers:{Authorization:'Bearer '+oaiKey()},body:fd,cache:'no-store'}).then(function(r){
-  if(r.ok)return r.json().then(function(j){return j&&j.text;});
-  if((r.status===400||r.status===404)&&model!==OAI_FALLBACK_MODEL)return oaiSend(blob,OAI_FALLBACK_MODEL);
-  var e=new Error('http '+r.status);e.status=r.status;throw e;});}
-function dictateInto(el,tap){if(!el)return;if(rec&&tap){stopListen();resumeHF();return;}if(oaiReady()&&!cam&&(tap||!hfOn)){oaiDictate(el);return;}googleDictate(el);}
+ }).catch(function(e){if(paused&&hfOn){hfStart();}var n=e&&e.name;if(n==='NotAllowedError'||n==='SecurityError'){msHide();micBlocked('denied');return;}msFallback(el,'Mic not available');});}
+function dictateInto(el,tap){if(!el)return;if(rec&&tap){stopListen();resumeHF();return;}if(!cam&&(tap||!hfOn)){if(msUse()){msDictate(el);return;}if(navigator.onLine===false&&!msHave()){toast('Offline dictation not downloaded – see Help',true);el.focus();return;}}googleDictate(el);}
 function googleDictate(el){if(!el)return;if(hfOn){el.focus();hfShow('Hands-free listening','Speak – typing into '+((el.dataset.f&&TEXTF[el.dataset.f])||'the box'),true);return;}listen('Dictating into '+(el.placeholder?'the box':'field'),function(t){if(RESTART_RE.test(norm(t))){setTimeout(function(){restartField(el);},50);return;}voiceInsert(el,t);},app.querySelector('.mic[data-target="'+el.id+'"]'),{cont:true});}
 
 var NUM={zero:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,first:1,second:2,third:3,fourth:4,fifth:5,to:2,too:2,for:4,won:1};
