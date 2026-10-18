@@ -143,6 +143,24 @@ ol.setup{padding-left:24px;margin:0}ol.setup li{margin:0 0 12px;color:var(--mute
 .undoBtn[aria-disabled=true]{opacity:.35;border-color:var(--line);color:var(--muted);cursor:default}
 .undoBtn[hidden]{display:none}
 #backBtn[hidden]{display:none!important}
+#printView{display:none}
+.pdfBtn{background:transparent;border:2px solid var(--honey,#ffb627);color:var(--honey,#ffb627);font-weight:700}
+.pdfOv{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:16px}
+.pdfOv .card{max-width:420px;width:100%}.pdfOv ol{margin:8px 0 14px 18px;padding:0;line-height:1.5}
+@media print{
+ @page{margin:14mm}
+ html,body{background:#fff!important;color:#111!important}
+ body>*:not(#printView){display:none!important}
+ #printView{display:block!important;font:11pt/1.45 system-ui,Roboto,Helvetica,Arial,sans-serif;color:#111}
+ #printView h1{font-size:18pt;margin:0 0 2px;color:#111}#printView .pmeta{color:#555;font-size:9.5pt;margin-bottom:14px;border-bottom:2px solid #e89a10;padding-bottom:6px}
+ #printView h2{font-size:14pt;margin:18px 0 6px;color:#111;border-bottom:1px solid #ccc;padding-bottom:3px;break-after:avoid}
+ #printView .hnotes{color:#444;font-style:italic;margin:0 0 8px}
+ #printView .pins{border:1px solid #ccc;border-left:4px solid #e89a10;border-radius:4px;padding:8px 10px;margin:0 0 10px;break-inside:avoid}
+ #printView h3{font-size:12pt;margin:0 0 6px;color:#111}
+ #printView table{border-collapse:collapse;width:100%}#printView th{text-align:left;width:28%;vertical-align:top;color:#444;font-weight:600;padding:2px 8px 2px 0}#printView td{padding:2px 0;white-space:pre-wrap;vertical-align:top}
+ #printView .pph img{width:30%;margin:6px 2% 0 0;border:1px solid #ccc}
+}
+
 .saveDraft{flex:0 0 auto!important;background:transparent;border:2px solid var(--honey,#ffb627);color:var(--honey,#ffb627);font-weight:700}
 .instBtn{width:100%}
 @media (display-mode: standalone){.instOnly{display:none!important}header{padding-top:max(10px,env(safe-area-inset-top))}}
@@ -231,14 +249,14 @@ function vHome(){var n=state.hives.length;
   if(!n)s+=empty('hive','No hives yet','Add your first hive to start logging inspections. Tip: tap &#127908; and say &ldquo;add hive&rdquo;.','+ Add your first hive','addHive');
   state.hives.forEach(function(h){var c=h.inspections.length,last=c?h.inspections.slice().sort(cmp)[0]:null;
     s+='<button class="card tap" data-act="openHive" data-id="'+h.id+'"><div class="row"><div class="grow"><div class="title">'+esc(h.name)+'</div><div class="meta">'+c+' inspection'+(c===1?'':'s')+(last?' &middot; last '+esc(fmtDate(last.date)):'')+'</div>'+(last&&last.strength?'<span class="pill '+esc(last.strength)+'">'+esc(last.strength)+'</span>':'')+'</div><span class="chev">&rsaquo;</span></div></button>';});
-  s+='</div>';if(n)s+='<div class="bar"><button class="primary" data-act="addHive">+ Add hive</button></div>';return s;}
+  s+='</div>';if(n)s+='<div class="bar"><button class="pdfBtn" data-act="pdfAll">&#128196; Save to PDF</button><button class="primary" data-act="addHive">+ Add hive</button></div>';return s;}
 function micFor(id){return '<button type="button" class="mic" data-act="dictate" data-target="'+id+'" aria-label="Dictate">&#127908;</button><button type="button" class="rst" data-act="restart" data-target="'+id+'" aria-label="Clear this field and dictate again" title="Restart: clear and speak again">&#8634;</button>';}
 function vAddHive(){return '<h1>New hive</h1><form id="hiveForm" class="screen" style="animation:none"><div class="panel"><label for="hName">Hive name *</label><div class="fr"><input id="hName" maxlength="80" placeholder="e.g. Hive 1 – Orchard">'+micFor('hName')+'</div><label for="hNotes">Notes (optional)</label><div class="fr"><textarea id="hNotes" placeholder="Location, origin, queen info…"></textarea>'+micFor('hNotes')+'</div></div><div class="bar"><button type="button" data-act="home">Cancel</button><button class="primary" type="submit">Save hive</button></div></form>';}
 function vHive(){var h=hive(route.id);if(!h){route={name:'home'};return vHome();}
   var s='<h1>'+esc(h.name)+'</h1>'+(h.notes?'<p class="sub">'+esc(h.notes)+'</p>':'<p class="sub">Inspection history</p>')+'<div class="panel">';
   if(!h.inspections.length)s+=empty('note','No inspections yet','Record what you see on your next visit to this hive.','+ Add first inspection','newInsp');
   h.inspections.slice().sort(cmp).forEach(function(i){s+='<button class="card tap" data-act="openInsp" data-id="'+i.id+'"><div class="row"><div class="grow"><div class="title">'+esc(fmtDate(i.date))+'</div><div class="meta">'+[i.weather,i.queenSeen==='yes'?'Queen seen':i.queenSeen==='no'?'Queen not seen':'',i.photos.length?i.photos.length+' photo'+(i.photos.length>1?'s':''):''].filter(Boolean).map(esc).join(' &middot; ')+'</div>'+(i.strength?'<span class="pill '+esc(i.strength)+'">'+esc(i.strength)+'</span>':'')+'</div><span class="chev">&rsaquo;</span></div></button>';});
-  return s+'</div><div class="bar"><button class="danger" data-act="delHive">Delete hive</button>'+(h.inspections.length?'<button class="primary" data-act="newInsp">+ Inspection</button>':'')+'</div>';}
+  return s+'</div><div class="bar"><button class="danger" data-act="delHive">Delete hive</button>'+(h.inspections.length?'<button class="pdfBtn" data-act="pdfHive">&#128196; Save to PDF</button>':'')+''+(h.inspections.length?'<button class="primary" data-act="newInsp">+ Inspection</button>':'')+'</div>';}
 function seg(field,opts,labels){return '<div class="seg" role="group">'+opts.map(function(o,ix){return '<button type="button" data-act="seg" data-f="'+field+'" data-v="'+o+'" aria-pressed="'+(draft[field]===o)+'">'+(labels?labels[ix]:cap(o))+'</button>';}).join('')+'</div>';}
 function tf(id,ph,ta){return '<label for="f_'+id+'">'+TEXTF[id]+'</label><div class="fr">'+(ta?'<textarea id="f_'+id+'" data-f="'+id+'" placeholder="'+ph+'">'+esc(draft[id])+'</textarea>':'<input id="f_'+id+'" data-f="'+id+'" placeholder="'+ph+'" value="'+esc(draft[id])+'">')+micFor('f_'+id)+'</div>';}
 var STEPS=['Colony','Health','Notes & photos'];
@@ -467,6 +485,20 @@ function addWeather(word){var el=document.getElementById('f_weather'),v=draft.we
 /* ---------- actions ---------- */
 function newInsp(){draft={step:0,date:today(),weather:'',strength:'',queenSeen:'',brood:'',honey:'',pests:'',treatments:'',notes:'',photos:[]};go({name:'form',id:route.id});}
 function confirmDiscard(){return !(draft&&(draft.photos.length||draft.notes||draft.weather||draft.strength||draft.pests))||confirm('Discard this inspection?');}
+
+/* ---------- Save to PDF (print view) ---------- */
+function pdfHtml(hs,title){var d=new Date();
+  var s='<h1>'+esc(title)+'</h1><div class="pmeta">Hive Notes export &middot; Exported '+esc(d.toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'long',year:'numeric'}))+' '+esc(d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}))+' &middot; '+hs.length+' hive'+(hs.length===1?'':'s')+'</div>';
+  hs.forEach(function(h){var ins=h.inspections.slice().sort(cmp);s+='<h2>'+esc(h.name)+' <small style="font-weight:400;color:#666">('+ins.length+' inspection'+(ins.length===1?'':'s')+')</small></h2>'+(h.notes?'<p class="hnotes">'+esc(h.notes)+'</p>':'');
+    if(!ins.length)s+='<p>No inspections recorded.</p>';
+    ins.forEach(function(i){var rows=[['Weather',i.weather],['Colony strength',i.strength],['Queen seen',i.queenSeen],['Brood pattern',i.brood],['Honey stores',i.honey],['Pests / disease',i.pests],['Treatments',i.treatments],['Notes',i.notes]];
+      s+='<div class="pins"><h3>'+esc(fmtDate(i.date))+'</h3><table>'+rows.map(function(r){return '<tr><th>'+r[0]+'</th><td>'+(r[1]?esc(cap(String(r[1]))):'—')+'</td></tr>';}).join('')+'</table>'+((i.photos&&i.photos.length)?'<div class="pph">'+i.photos.map(function(p){return '<img src="'+p+'" alt="">';}).join('')+'</div>':'')+'</div>';});});
+  return s;}
+function exportPdf(hs,title){var pv=document.getElementById('printView');if(!pv){pv=document.createElement('div');pv.id='printView';document.body.appendChild(pv);}
+  pv.innerHTML=pdfHtml(hs,title);var o=document.querySelector('.pdfOv');if(o)o.remove();o=document.createElement('div');o.className='pdfOv';o.setAttribute('role','dialog');
+  o.innerHTML='<div class="card"><div class="title">&#128196; Save to PDF</div><ol><li>Tap <b>Print / Save PDF</b> below.</li><li><b>Android Chrome:</b> set the printer at the top to <b>Save as PDF</b>, then tap the PDF button.</li><li><b>iPhone Safari:</b> tap <b>Share</b> (or pinch out on the preview), then <b>Save to Files</b>.</li></ol><div class="bar"><button type="button" data-x="0">Cancel</button><button type="button" class="primary" data-x="1">Print / Save PDF</button></div></div>';
+  o.onclick=function(e){var b=e.target.closest('[data-x]');if(e.target===o||b){o.remove();if(b&&b.dataset.x==='1'){try{window.print();}catch(err){toast('Printing is not available in this browser',true);}}}};
+  document.body.appendChild(o);}
 var DKEY='hiveNotes.draft';
 function storeDraft(){if(!draft||route.name!=='form')return false;var o={hive:route.id,t:Date.now(),d:draft};try{localStorage.setItem(DKEY,JSON.stringify(o));return true;}catch(e){try{o.d=Object.assign({},draft,{photos:[]});localStorage.setItem(DKEY,JSON.stringify(o));toast('Saved text ✓ (photos too large to keep in draft)',true);return 'nophotos';}catch(e2){toast('Could not save draft: storage full',true);return false;}}}
 function clearDraft(){try{localStorage.removeItem(DKEY);}catch(e){}}
@@ -547,6 +579,8 @@ app.addEventListener('click',function(e){var b=e.target.closest('[data-act]');if
   else if(a==='prev'){if((draft.step||0)>0)setStep(draft.step-1);else cancelForm();}
   else if(a==='save')submitInsp();
   else if(a==='saveDraft')saveDraftNow();
+  else if(a==='pdfAll')exportPdf(state.hives,'All hives');
+  else if(a==='pdfHive'){var hp=hive(route.id);if(hp)exportPdf([hp],hp.name);}
   else if(a==='wx')addWeather(b.dataset.v);
   else if(a==='seg'){var f=b.dataset.f;setSeg(f,draft[f]===b.dataset.v?'':b.dataset.v);}
   else if(a==='rmPhoto'){draftU('photos',draft.photos,'Remove photo');draft.photos.splice(+b.dataset.ix,1);document.getElementById('thumbs').innerHTML=thumbsHtml(draft.photos,true);}
@@ -563,7 +597,7 @@ app.addEventListener('submit',function(e){e.preventDefault();
   if(e.target.id==='hiveForm'){var n=document.getElementById('hName').value.trim();if(!n){toast('Please enter a hive name',true);return;}
     var h={id:uid(),name:n,notes:document.getElementById('hNotes').value.trim(),created:Date.now(),inspections:[]};state.hives.push(h);if(save()){pushH('Add hive “'+n+'”',[{id:h.id,ix:-1,j:null}]);toast('Hive added');go({name:'hive',id:h.id});}}
   else if(e.target.id==='inspForm'){if((draft.step||0)<2)setStep(draft.step+1);else submitInsp();}});
-window.HiveNotes={restartField:restartField,openMicGuide:openMicGuide,openSetup:openSetup,uaKind:uaKind,fixSteps:fixSteps,micBlocked:micBlocked,setHF:setHF,isHF:function(){return hfOn;},resize:resize,validate:validate,importHives:importHives,command:command,getState:function(){return state;},getDraft:function(){return draft;},undo:undoLast,undoStack:function(){return ustack;},KEY:KEY,saveDraft:saveDraftNow};
+window.HiveNotes={restartField:restartField,openMicGuide:openMicGuide,openSetup:openSetup,uaKind:uaKind,fixSteps:fixSteps,micBlocked:micBlocked,setHF:setHF,isHF:function(){return hfOn;},resize:resize,validate:validate,importHives:importHives,command:command,getState:function(){return state;},getDraft:function(){return draft;},undo:undoLast,undoStack:function(){return ustack;},KEY:KEY,saveDraft:saveDraftNow,exportPdf:exportPdf};
 var restored=restoreDraft();render();if(restored)toast('Restored your unsaved inspection draft');
 
 hfUI();try{if(localStorage.getItem(HFKEY)==='1')setHF(true,true);}catch(e){}
