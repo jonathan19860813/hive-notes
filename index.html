@@ -252,15 +252,18 @@ function saveU(){var p=ustack.filter(function(e){return e.t!=='draft';});
   while(p.length&&JSON.stringify(p).length>UBUDGET)p.shift();
   for(;;){try{localStorage.setItem(UKEY,JSON.stringify(p));return;}catch(e){if(!p.length){try{localStorage.removeItem(UKEY);}catch(x){}return;}p.shift();}}}
 function undoHtml(){return '<button type="button" class="undoBtn" aria-label="Undo last change" title="Undo last change">&#8630;</button>';}
-function undoUI(){var top=ustack[ustack.length-1],off=!top||(route.name==='form'&&top.t!=='draft');document.querySelectorAll('.undoBtn').forEach(function(b){
+function undoUI(){var top=ustack[ustack.length-1],inF=route.name==='form'&&draft,nf=inF?fhNewest():null,off=inF?!nf:!top;if(nf){var S0=fh.s[fhScope()].h[nf];top={label:S0[S0.length-1].l};}document.querySelectorAll('.undoBtn').forEach(function(b){
   b.hidden=b.id==='undoBtn'&&route.name==='home'&&!state.hives.length&&!document.querySelector('.overlay');b.setAttribute('aria-disabled',off?'true':'false');
   b.title=off?'Nothing to undo':'Undo: '+top.label;b.dataset.say='undo|undo that|undo last';b.setAttribute('aria-label',b.title);});}
 function capH(ids){return ids.map(function(id){var ix=-1;state.hives.forEach(function(h,i){if(h.id===id)ix=i;});return{id:id,ix:ix,j:ix<0?null:JSON.stringify(state.hives[ix])};});}
-function pushU(e){e.r=JSON.parse(JSON.stringify(route));ustack.push(e);while(ustack.length>UMAX)ustack.shift();if(e.t!=='draft')saveU();undoUI();}
+function pushU(e){e.r=JSON.parse(JSON.stringify(route));e.sid=SID;e.at=Date.now();ustack.push(e);while(ustack.length>UMAX)ustack.shift();if(e.t!=='draft')saveU();undoUI();}
 function pushH(label,items){pushU({t:'hives',label:label,items:items});}
 function dropDraftU(){var n=ustack.length;ustack=ustack.filter(function(e){return e.t!=='draft';});if(n!==ustack.length)undoUI();}
-function undoLast(){var tp=ustack[ustack.length-1];if(!tp){undoUI();toast('Nothing to undo');return;}if(route.name==='form'&&tp.t!=='draft'){toast('Nothing to undo in this inspection yet');return;}var e=ustack.pop();
-  if(e.t==='draft'){if(!draft||route.name!=='form'){undoUI();return;}draft[e.f]=e.v;var a=document.activeElement;if(a&&a.blur)a.blur();render();try{storeDraft();camCount();}catch(x){}toast('Undid: '+e.label);return;}
+function undoLast(){if(route.name==='form'&&draft){toast(plainUndoForm());return;}
+  var tp=ustack[ustack.length-1];if(!tp){undoUI();toast('Nothing to undo');return;}
+  if(tp.sid!==SID){var when=tp.at?new Date(tp.at).toLocaleString(undefined,{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'an earlier session';askConfirm('Undo “'+tp.label+'” from '+when+'? This was done in an earlier session.','Yes, undo it',undoHiveTop);return;}
+  undoHiveTop();}
+function undoHiveTop(){var e=ustack.pop();if(!e){undoUI();return;}
   var before=JSON.stringify(state.hives);
   if(e.t==='all')state.hives=JSON.parse(e.j);
   else e.items.slice().reverse().forEach(function(it){state.hives=state.hives.filter(function(h){return h.id!==it.id;});if(it.j!=null)state.hives.splice(Math.min(it.ix,state.hives.length),0,JSON.parse(it.j));});
@@ -272,8 +275,35 @@ function undoLast(){var tp=ustack[ustack.length-1];if(!tp){undoUI();toast('Nothi
   document.querySelectorAll('.overlay').forEach(function(o){if(!o.querySelector('.undoBtn'))return;if(e.t!=='all')o.remove();});
   go(r);toast('Undid: '+e.label);}
 document.addEventListener('click',function(ev){var b=ev.target.closest('.undoBtn');if(!b)return;ev.preventDefault();if(b.getAttribute('aria-disabled')==='true')return;undoLast();});
-function draftU(f,old,label){if(!draft)return;pushU({t:'draft',f:f,v:Array.isArray(old)?old.slice():old,label:label});}
-function commitF(f){if(!draft||route.name!=='form'||!TEXTF[f])return;var v=draft[f]||'',o=baseF[f]||'';if(v===o)return;draftU(f,o,TEXTF[f]+' edit');baseF[f]=v;}
+function draftU(f,old,label){if(!draft)return;if(f==='photos'){fhPush('photos',{op:'add',n:(old||[]).length},label);return;}fhPush(f,old,label);}
+/* ---------- per-box undo history (persisted) ---------- */
+var FHKEY='hiveNotes.fieldHist',FHMAX=20,FHBUDGET=200000,FHDAYS=7,SID=Date.now()+'-'+Math.random().toString(36).slice(2,6),fh=loadFH(),cfT={};
+var FNAMES={weather:'Weather',pests:'Pests / disease',treatments:'Treatments',notes:'Notes',date:'Date',strength:'Colony strength',queenSeen:'Queen seen',brood:'Brood pattern',honey:'Honey stores',photos:'Photos'};
+var FWORDS={weather:['weather','temperature','temp'],pests:['pests','pest','varroa','mites','disease','pests and disease'],treatments:['treatments','treatment','treated'],notes:['notes','note','comments','comment'],date:['date'],strength:['strength','colony','colony strength'],queenSeen:['queen','queen seen'],brood:['brood','brood pattern'],honey:['honey','honey stores','stores'],photos:['photos','photo','picture','pictures']};
+function loadFH(){var o;try{o=JSON.parse(localStorage.getItem(FHKEY));}catch(e){}if(!o||typeof o!=='object'||!o.s)o={s:{}};var now=Date.now();Object.keys(o.s).forEach(function(k){var S=o.s[k];if(!S||!S.h||(S.fin&&now-S.fin>FHDAYS*864e5))delete o.s[k];});return o;}
+function saveFH(){var cur=fhScope();for(var g=0;g<400;g++){var j=JSON.stringify(fh);if(j.length<=FHBUDGET){try{localStorage.setItem(FHKEY,j);return;}catch(e){}}
+  var ks=Object.keys(fh.s).filter(function(k){return k!==cur;}).sort(function(a,b){return (fh.s[a].t||0)-(fh.s[b].t||0);});
+  if(ks.length){delete fh.s[ks[0]];continue;}var S=fh.s[cur];if(!S)return;var of=null,ot=Infinity;Object.keys(S.h).forEach(function(f){var a=S.h[f];if(a.length&&a[0].t<ot){ot=a[0].t;of=f;}});if(!of)return;S.h[of].shift();}}
+function fhScope(){return draft&&route.name==='form'&&route.id?'draft:'+route.id:null;}
+function fhPush(f,v,label){var sc=fhScope();if(!sc)return;var S=fh.s[sc]||(fh.s[sc]={t:0,h:{}});var a=S.h[f]||(S.h[f]=[]);var now=Date.now();a.push({v:v,t:now,l:label||((FNAMES[f]||f)+' edit')});while(a.length>FHMAX)a.shift();S.t=now;saveFH();undoUI();}
+function fhHas(f){var S=fh.s[fhScope()];return !!(S&&S.h[f]&&S.h[f].length);}
+function fhNewest(){var S=fh.s[fhScope()],bf=null,bt=-1;if(!S)return null;Object.keys(S.h).forEach(function(f){var a=S.h[f];if(a.length&&a[a.length-1].t>bt){bt=a[a.length-1].t;bf=f;}});return bf;}
+function fhDrop(pref){Object.keys(fh.s).forEach(function(k){if(k===pref||k.indexOf(pref+':')===0)delete fh.s[k];});saveFH();}
+function fhMove(from,to){if(fh.s[from]){fh.s[to]=fh.s[from];fh.s[to].fin=Date.now();delete fh.s[from];saveFH();}}
+function flushF(){Object.keys(TEXTF).forEach(function(k){clearTimeout(cfT[k]);commitF(k);});}
+function fieldWord(x){x=norm(x).replace(/^(the|my|that|this) /,'');var best=null,bs=0;Object.keys(FWORDS).forEach(function(f){FWORDS[f].forEach(function(w){var sc=w===x?1:sim(x,w);if(sc>bs){bs=sc;best=f;}});});return bs>=0.78?best:null;}
+function shortV(v){if(Array.isArray(v))return v.length+' photos';v=String(v==null?'':v);return v?'“'+(v.length>40?v.slice(0,40)+'…':v)+'”':'(empty)';}
+function fhUndo(f){if(!draft||route.name!=='form')return null;flushF();var S=fh.s[fhScope()];if(!f)f=fhNewest();if(!f||!S||!S.h[f]||!S.h[f].length)return f?'Nothing to undo for '+(FNAMES[f]||f):null;
+  var e=S.h[f].pop(),a=document.activeElement,foc=a&&a.dataset&&a.dataset.f===f,msg;
+  if(f==='photos'){var ph=draft.photos;if(e.v&&e.v.op==='rm'){ph.splice(Math.min(e.v.ix,ph.length),0,e.v.d);msg='Photos: put back photo '+(e.v.ix+1);}else{draft.photos=ph.slice(0,e.v&&e.v.n!=null?e.v.n:ph.length-1);msg='Photos: removed the last photo ('+draft.photos.length+' left)';}}
+  else{draft[f]=e.v;msg=(FNAMES[f]||f)+': back to '+shortV(e.v);}
+  if(FSTEP[f]!=null)draft.step=FSTEP[f];saveFH();render();try{storeDraft();camCount();}catch(x){}
+  if(foc){var el=document.getElementById('f_'+f);if(el){el.focus();try{el.setSelectionRange(el.value.length,el.value.length);}catch(x){}}}
+  return msg;}
+function focusedF(){var a=document.activeElement;return a&&app.contains(a)&&a.dataset&&a.dataset.f||null;}
+var STEPF=[null,'weather','queenSeen','brood','honey','pests','treatments','notes','photos'];
+function plainUndoForm(){var f=focusedF()||STEPF[draft.step||0];var m=(f&&fhHas(f))?fhUndo(f):fhUndo(null);return m||'Nothing to undo in this inspection';}
+function commitF(f){if(!draft||route.name!=='form'||!TEXTF[f])return;clearTimeout(cfT[f]);var v=draft[f]||'',o=baseF[f]||'';if(v===o)return;fhPush(f,o,TEXTF[f]+' edit');baseF[f]=v;}
 app.addEventListener('focusout',function(e){var f=e.target.dataset&&e.target.dataset.f;if(f)commitF(f);});
 function vHome(){var n=state.hives.length;
   var dr=readDraft(),dh=dr&&hive(dr.hive);var s='<h1>Your hives</h1><p class="sub">'+n+' hive'+(n===1?'':'s')+' &middot; ~'+usage()+' KB of ~5 MB used</p>'+(dh?'<div class="resumeBar"><div class="grow">Unfinished inspection for <b>'+esc(dh.name)+'</b></div><button class="primary" data-act="resume" data-say="resume|resume inspection|continue inspection" data-id="'+dh.id+'">&#9654; Resume</button></div>':'')+'<div class="panel">';
@@ -333,7 +363,7 @@ function openHelp(){var v=overlay('Help &amp; backup','<div class="obody">'+
 '<div class="instOnly"><h3>Install app</h3><button type="button" id="hInstall" class="primary instBtn">&#11015; Install Hive Notes</button><p class="meta" id="hInstallMsg"></p></div>'+'<div class="bar" style="padding-top:0;margin-bottom:6px"><button type="button" id="hMic">&#127908; Microphone help</button></div>'+'<h3>Settings</h3><button id="hfSetting" type="button" aria-pressed="'+hfOn+'" style="width:100%">Hands-free mode: '+(hfOn?'On':'Off')+'</button><p class="meta">Hands-free keeps listening so you can speak commands or dictate into the box you tapped, without touching the mic. Uses more battery. Say &ldquo;stop listening&rdquo; or tap the mic to go back to push-to-talk.</p>'+'<h3>1. Open the app on your phone</h3><ol><li>Save the <b>hive-notes.html</b> file to your phone (e.g. from email, Google Drive or iCloud).</li><li>Open it in <b>Chrome</b> (Android) or <b>Safari</b> (iPhone). Tip: open the Files app, tap the file, and choose Chrome/Safari.</li></ol>'+
 '<h3>2. Add it to your home screen</h3><ul><li><b>Android:</b> in Chrome tap the menu <b>&#8942;</b> (top right) &gt; <b>Add to Home screen</b>.</li><li><b>iPhone:</b> in Safari tap <b>Share</b> (square with arrow) &gt; <b>Add to Home Screen</b>.</li></ul>'+
 '<h3>3. Use it anywhere</h3><ul><li>Tap the new icon on your home screen. The app works <b>offline</b> in the apiary &ndash; no signal needed.</li></ul>'+
-'<h3>What you can say &#128483;</h3><div class="card" style="margin:0 0 12px"><ul style="margin:0"><li><b>Move:</b> &ldquo;next&rdquo;, &ldquo;back&rdquo;, &ldquo;save&rdquo; (keeps the draft), &ldquo;finish&rdquo; / &ldquo;done&rdquo; (completes it), &ldquo;cancel&rdquo;, &ldquo;go home&rdquo; (keeps your draft)</li><li><b>Fill a box:</b> &ldquo;weather sunny and calm&rdquo;, &ldquo;pests a few varroa mites&rdquo;, &ldquo;treatments oxalic acid&rdquo;, &ldquo;notes added a super&rdquo;</li><li><b>Queen:</b> &ldquo;queen seen&rdquo; / &ldquo;queen not seen&rdquo;</li><li><b>Strength:</b> &ldquo;strength strong&rdquo; (or just &ldquo;strong&rdquo;, &ldquo;medium&rdquo;, &ldquo;weak&rdquo;)</li><li><b>Brood:</b> &ldquo;brood solid&rdquo;, &ldquo;brood spotty&rdquo;, &ldquo;brood patchy&rdquo;, &ldquo;no brood&rdquo;</li><li><b>Honey stores:</b> &ldquo;honey good&rdquo;, &ldquo;honey low&rdquo;, &ldquo;honey full&rdquo;</li><li><b>Temperature:</b> &ldquo;twenty degrees&rdquo;, &ldquo;it&rsquo;s 18 degrees and sunny&rdquo; &rarr; Weather gets 20&deg;C / 18&deg;C</li><li><b>Any button:</b> say its label, e.g. &ldquo;save to PDF&rdquo;, &ldquo;resume&rdquo;, &ldquo;delete hive&rdquo; (asks &ldquo;yes&rdquo; / &ldquo;no&rdquo;), &ldquo;not seen&rdquo;, &ldquo;patchy&rdquo;, &ldquo;close&rdquo;</li><li><b>Numbers:</b> in hands-free mode buttons show small numbers &ndash; say &ldquo;press 3&rdquo; (or &ldquo;show numbers&rdquo; / &ldquo;hide numbers&rdquo;)</li><li><b>Pages:</b> &ldquo;next page&rdquo;, &ldquo;previous page&rdquo;, &ldquo;scroll down&rdquo; / &ldquo;scroll up&rdquo;</li><li><b>Photos:</b> &ldquo;open the camera&rdquo;, then &ldquo;take a photo&rdquo; / &ldquo;snap&rdquo; / &ldquo;cheese&rdquo; (3-2-1, then it&rsquo;s added); &ldquo;undo&rdquo; removes the last one; &ldquo;close camera&rdquo; / &ldquo;done&rdquo;. It starts on the <b>back</b> lens; &ldquo;switch camera&rdquo; / &ldquo;flip camera&rdquo; toggles, &ldquo;back camera&rdquo; / &ldquo;hive camera&rdquo; or &ldquo;front camera&rdquo; / &ldquo;selfie camera&rdquo; picks one (remembered). Saying &ldquo;take a photo&rdquo; with the camera closed opens it and counts down. The first time, tap <b>Allow</b> for the camera.</li><li><b>Fix mistakes:</b> &ldquo;restart&rdquo; (clears the box you&rsquo;re in), &ldquo;undo&rdquo; / &ldquo;undo that&rdquo; (same as the &#8630; button, never changes page); &ldquo;stop&rdquo; turns hands-free off</li><li><b>Elsewhere:</b> &ldquo;open Oscar&rdquo;, &ldquo;add inspection&rdquo;, &ldquo;add hive&rdquo;, &ldquo;help&rdquo;</li></ul><p class="meta" style="margin:8px 0 0">Commands work even while a text box is selected; anything else you say is typed into that box. The status line shows <i>Heard: &hellip; &rarr; what it did</i>. Beekeeping words (varroa, brood, queen cells, super, small hive beetle&hellip;) are auto-corrected.</p></div>'+
+'<h3>What you can say &#128483;</h3><div class="card" style="margin:0 0 12px"><ul style="margin:0"><li><b>Move:</b> &ldquo;next&rdquo;, &ldquo;back&rdquo;, &ldquo;save&rdquo; (keeps the draft), &ldquo;finish&rdquo; / &ldquo;done&rdquo; (completes it), &ldquo;cancel&rdquo;, &ldquo;go home&rdquo; (keeps your draft)</li><li><b>Fill a box:</b> &ldquo;weather sunny and calm&rdquo;, &ldquo;pests a few varroa mites&rdquo;, &ldquo;treatments oxalic acid&rdquo;, &ldquo;notes added a super&rdquo;</li><li><b>Queen:</b> &ldquo;queen seen&rdquo; / &ldquo;queen not seen&rdquo;</li><li><b>Strength:</b> &ldquo;strength strong&rdquo; (or just &ldquo;strong&rdquo;, &ldquo;medium&rdquo;, &ldquo;weak&rdquo;)</li><li><b>Brood:</b> &ldquo;brood solid&rdquo;, &ldquo;brood spotty&rdquo;, &ldquo;brood patchy&rdquo;, &ldquo;no brood&rdquo;</li><li><b>Honey stores:</b> &ldquo;honey good&rdquo;, &ldquo;honey low&rdquo;, &ldquo;honey full&rdquo;</li><li><b>Temperature:</b> &ldquo;twenty degrees&rdquo;, &ldquo;it&rsquo;s 18 degrees and sunny&rdquo; &rarr; Weather gets 20&deg;C / 18&deg;C</li><li><b>Any button:</b> say its label, e.g. &ldquo;save to PDF&rdquo;, &ldquo;resume&rdquo;, &ldquo;delete hive&rdquo; (asks &ldquo;yes&rdquo; / &ldquo;no&rdquo;), &ldquo;not seen&rdquo;, &ldquo;patchy&rdquo;, &ldquo;close&rdquo;</li><li><b>Numbers:</b> in hands-free mode buttons show small numbers &ndash; say &ldquo;press 3&rdquo; (or &ldquo;show numbers&rdquo; / &ldquo;hide numbers&rdquo;)</li><li><b>Pages:</b> &ldquo;next page&rdquo;, &ldquo;previous page&rdquo;, &ldquo;scroll down&rdquo; / &ldquo;scroll up&rdquo;</li><li><b>Photos:</b> &ldquo;open the camera&rdquo;, then &ldquo;take a photo&rdquo; / &ldquo;snap&rdquo; / &ldquo;cheese&rdquo; (3-2-1, then it&rsquo;s added); &ldquo;undo&rdquo; removes the last one; &ldquo;close camera&rdquo; / &ldquo;done&rdquo;. It starts on the <b>back</b> lens; &ldquo;switch camera&rdquo; / &ldquo;flip camera&rdquo; toggles, &ldquo;back camera&rdquo; / &ldquo;hive camera&rdquo; or &ldquo;front camera&rdquo; / &ldquo;selfie camera&rdquo; picks one (remembered). Saying &ldquo;take a photo&rdquo; with the camera closed opens it and counts down. The first time, tap <b>Allow</b> for the camera.</li><li><b>Fix mistakes:</b> &ldquo;restart&rdquo; (clears the box you&rsquo;re in), &ldquo;undo&rdquo; (the box you&rsquo;re in, or the newest change), &ldquo;undo treatments&rdquo; / &ldquo;treatments, undo&rdquo; (that box&rsquo;s last change &ndash; works after closing the app too); outside an inspection, undoing something from an earlier session asks &ldquo;yes&rdquo; / &ldquo;no&rdquo;; &ldquo;stop&rdquo; turns hands-free off</li><li><b>Elsewhere:</b> &ldquo;open Oscar&rdquo;, &ldquo;add inspection&rdquo;, &ldquo;add hive&rdquo;, &ldquo;help&rdquo;</li></ul><p class="meta" style="margin:8px 0 0">Commands work even while a text box is selected; anything else you say is typed into that box. The status line shows <i>Heard: &hellip; &rarr; what it did</i>. Beekeeping words (varroa, brood, queen cells, super, small hive beetle&hellip;) are auto-corrected.</p></div>'+
 '<h3>Voice input &#127908;</h3><ul><li>Tap the mic next to any box to <b>dictate</b> into it.</li><li>Tap the mic in the top bar for <b>commands</b>: &ldquo;open hive 2&rdquo;, &ldquo;add hive&rdquo;, &ldquo;add inspection&rdquo;; in the form: &ldquo;strong&rdquo;, &ldquo;queen seen&rdquo; / &ldquo;no queen&rdquo;, &ldquo;sunny&rdquo;, &ldquo;brood solid&rdquo;, &ldquo;honey full&rdquo;, &ldquo;next&rdquo;, &ldquo;back&rdquo;, &ldquo;save&rdquo;, &ldquo;cancel&rdquo;, or a field name like &ldquo;notes queen cells on frame 3&rdquo;.</li><li>Voice recognition is provided by your browser. In <b>Chrome it usually needs internet</b>; without signal, just type &ndash; everything else still works offline. Allow microphone access when asked. Voice only works when the app is opened from a web link (https), not as a downloaded file &ndash; otherwise use your keyboard&rsquo;s mic key.</li></ul>'+
 '<h3>Troubleshooting</h3><ul><li><b>File won&rsquo;t open / shows code:</b> it opened in a text or file viewer. Open it with Chrome or Safari instead (Files app &gt; tap file &gt; Open with / Share &gt; Safari).</li>'+
 '<li><b>My data seems missing:</b> data is saved only on <b>this phone, in this browser</b>. A different browser, a different copy of the file, private mode, or clearing site/browser data shows an empty app. Go back to the browser you used before, or import a backup.</li>'+
@@ -351,7 +381,7 @@ function validate(d){if(!d||typeof d!=='object'||!Array.isArray(d.hives))throw n
     return{id:str(h.id)||uid(),name:h.name.trim(),notes:str(h.notes),created:+h.created||Date.now(),inspections:(Array.isArray(h.inspections)?h.inspections:[]).map(function(i){if(!i||typeof i!=='object')throw new Error('Bad inspection in file.');
       return{id:str(i.id)||uid(),created:+i.created||Date.now(),date:/^\d{4}-\d{2}-\d{2}$/.test(i.date)?i.date:today(),weather:str(i.weather),strength:['weak','medium','strong'].indexOf(i.strength)>=0?i.strength:'',queenSeen:['yes','no'].indexOf(i.queenSeen)>=0?i.queenSeen:'',brood:str(i.brood),honey:str(i.honey),pests:str(i.pests),treatments:str(i.treatments),notes:str(i.notes),
         photos:(Array.isArray(i.photos)?i.photos:[]).filter(function(p){return typeof p==='string'&&/^data:image\/(jpeg|png|webp|gif);base64,/.test(p);})};})};});}
-function importHives(hives,mode){var before=JSON.stringify(state),bAll=JSON.stringify(state.hives);
+function importHives(hives,mode){fh={s:{}};saveFH();var before=JSON.stringify(state),bAll=JSON.stringify(state.hives);
   if(mode==='replace')state={hives:hives};
   else hives.forEach(function(h){var ex=hive(h.id);if(!ex){state.hives.push(h);return;}h.inspections.forEach(function(i){if(!ex.inspections.some(function(x){return x.id===i.id;}))ex.inspections.push(i);});});
   if(save()){pushU({t:'all',j:bAll,label:'Import backup'});toast('Backup imported');go({name:'home'});return true;}state=JSON.parse(before);return false;}
@@ -438,30 +468,46 @@ function retryMic(){clearBlock();if(insecure())return micBlocked(isFileProto()?'
   var go=function(){micBtn.onclick();};
   if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia){navigator.mediaDevices.getUserMedia({audio:true}).then(function(st){st.getTracks().forEach(function(t){t.stop();});toast('Microphone allowed ✓');go();},function(e){micBlocked(e&&e.name==='NotFoundError'?'start':'denied');});}
   else go();}
-function checkPermDenied(cb){try{if(navigator.permissions&&navigator.permissions.query)navigator.permissions.query({name:'microphone'}).then(function(p){if(p.state==='denied')cb();},function(){});}catch(e){}}
-function listen(label,onFinal,btn){requestWakeLock();
+function checkPermDenied(cb){permDenied(cb);}
+function permDenied(cb){try{if(!(navigator.permissions&&navigator.permissions.query))return;var q=function(){return navigator.permissions.query({name:'microphone'});};
+  q().then(function(p){if(p.state!=='denied')return;setTimeout(function(){q().then(function(p2){if(p2.state==='denied')cb();},function(){});},700);},function(){});}catch(e){}}
+var voiceWorked=false,hfPausedPTT=false,pttRetry=false;
+function resumeHF(){if(!hfPausedPTT)return;setTimeout(function(){if(rec||pttRetry||!hfPausedPTT)return;hfPausedPTT=false;if(hfOn){hfErrors=0;hfStart();}},400);}
+function listen(label,onFinal,btn,opts){requestWakeLock();opts=opts||{};
   btn=btn||micBtn;
-  if(rec){stopListen();return;}                       // second tap = stop
+  if(rec){stopListen();resumeHF();return;}                       // second tap = stop
   if(!SR){voiceProblem('Voice input isn’t available in this browser.',GBOARD);return;}
   if(insecure()){micBlocked(isFileProto()?'file':'insecure');return;}
-  var r;try{r=new SR();}catch(e){voiceProblem('Could not start voice input ('+e.message+').',GBOARD);return;}
+  if(hfOn||hfRec){hfPausedPTT=hfPausedPTT||hfOn;hfStop();}
+  var tries=opts._try||0;pttRetry=false;
+  var r;try{r=new SR();}catch(e){voiceProblem('Could not start voice input ('+e.message+').',GBOARD);resumeHF();return;}
   rec=r;recBtn=btn;btn.classList.add('on');
-  r.lang=navigator.language||'en-US';r.interimResults=true;r.continuous=false;r.maxAlternatives=5;
-  var got='',started=false,failed=false;
-  setInd('starting',label,'');
-  r.onstart=r.onaudiostart=function(){if(rec!==r)return;started=true;clearTimeout(watchdog);setInd('listening',label);};
+  r.lang=navigator.language||'en-US';r.interimResults=true;r.continuous=!!opts.cont;r.maxAlternatives=5;
+  var got='',tmp0='',started=false,failed=false,sil=null;
+  setInd('starting',tries?'Reconnecting voice…':label,'');
+  function retry(){failed=true;clearTimeout(watchdog);clearTimeout(sil);if(rec===r){rec=null;try{r.abort();}catch(e){}}
+    if(tries<2){pttRetry=true;setInd('starting','Reconnecting voice…','');setTimeout(function(){pttRetry=false;var o=Object.assign({},opts,{_try:tries+1});if(recBtn)recBtn.classList.remove('on');recBtn=null;listen(label,onFinal,btn,o);},700);}
+    else{endUI(true);voiceProblem('Voice didn’t start – weak signal or the mic is busy. Tap the mic to try again.',GBOARD);resumeHF();}}
+  function deliver(g){endUI(true);setInd('done',label,g);var i=ind;setTimeout(function(){if(ind===i){ind.remove();ind=null;}},1500);resumeHF();try{onFinal(g);}catch(err){toast('Error: '+err.message,true);}}
+  r.onstart=r.onaudiostart=function(){if(rec!==r)return;started=true;clearTimeout(watchdog);clearBlock();setInd('listening',label);};
   r.onresult=function(e){if(rec!==r)return;var fin='',tmp='';for(var i=e.resultIndex;i<e.results.length;i++){var t=e.results[i].isFinal?pickAlt(e.results[i]):e.results[i][0].transcript;if(e.results[i].isFinal)fin+=t;else tmp+=t;}
-    if(fin)got=(got?got+' ':'')+fin.trim();setInd(fin?'done':'listening',label,(got||tmp).trim());};
-  r.onerror=function(e){if(rec!==r&&e.error==='aborted')return;failed=true;var m=VERR[e.error]||('Voice error: '+e.error+'.');
-    if(e.error==='aborted'){endUI();return;}if(e.error==='not-allowed'||e.error==='service-not-allowed'){micBlocked(e.error);return;}voiceProblem(m,e.error==='no-speech'?'':GBOARD);};
-  r.onnomatch=function(){if(rec!==r)return;failed=true;voiceProblem('Couldn’t understand that. Try again, a bit slower.');};
-  r.onend=function(){if(rec!==r)return;var g=got.trim();if(failed)return;
-    if(g){endUI(true);setInd('done',label,g);var i=ind;setTimeout(function(){if(ind===i){ind.remove();ind=null;}},1500);try{onFinal(g);}catch(err){toast('Error: '+err.message,true);}}
-    else if(!started)micBlocked('timeout');
-    else voiceProblem(VERR['no-speech']);};
-  watchdog=setTimeout(function(){if(rec===r&&!started){failed=true;try{r.abort();}catch(e){}micBlocked('timeout');}},5000);
-  try{r.start();}catch(e){failed=true;clearTimeout(watchdog);if(e&&e.name==='InvalidStateError'){voiceProblem('Voice was busy – tap the mic again.');}else micBlocked('start');return;}
-  checkPermDenied(function(){if(rec===r){failed=true;try{r.abort();}catch(e){}micBlocked('denied');}});clearBlock();
+    if(fin){voiceWorked=true;got=(got?got+' ':'')+fin.trim();}tmp0=tmp.trim();setInd(fin?'done':'listening',label,(got+(tmp0?' '+tmp0:'')).trim());
+    if(opts.cont){clearTimeout(sil);sil=setTimeout(function(){if(rec===r){try{r.stop();}catch(x){}}},2500);}};
+  r.onerror=function(e){if(rec!==r)return;var er=e.error;
+    if(er==='aborted'){failed=true;endUI();resumeHF();return;}
+    if(er==='not-allowed'||er==='service-not-allowed'){failed=true;if(voiceWorked){permDenied(function(){micBlocked('denied');});endUI(true);voiceProblem('Voice stopped – tap the mic to try again.');resumeHF();return;}micBlocked(er);return;}
+    if(er==='audio-capture'){retry();return;}
+    if(er==='no-speech'){failed=true;var g0=(got+' '+tmp0).trim();if(g0)return deliver(g0);voiceProblem(VERR['no-speech']);resumeHF();return;}
+    failed=true;if(er==='network'){var g1=(got+' '+tmp0).trim();if(g1)return deliver(g1);voiceProblem('Waiting for signal… '+VERR.network,GBOARD);resumeHF();return;}
+    voiceProblem(VERR[er]||('Voice error: '+er+'.'),GBOARD);resumeHF();};
+  r.onnomatch=function(){if(rec!==r)return;var g=(got+' '+tmp0).trim();if(g){failed=true;return deliver(g);}failed=true;voiceProblem('Couldn’t understand that. Try again, a bit slower.');resumeHF();};
+  r.onend=function(){if(rec!==r)return;clearTimeout(sil);if(failed)return;var g=(got+' '+tmp0).trim();
+    if(g)deliver(g);
+    else if(!started)retry();
+    else{voiceProblem(VERR['no-speech']);resumeHF();}};
+  watchdog=setTimeout(function(){if(rec===r&&!started)retry();},5000);
+  try{r.start();}catch(e){retry();return;}
+  permDenied(function(){if(rec===r){failed=true;rec=null;try{r.abort();}catch(e){}}micBlocked('denied');});
 }
 
 /* ---------- beekeeping vocabulary tuning ---------- */
@@ -501,7 +547,7 @@ var VOCAB=['varroa','brood','queen','cells','super','hive','tool','capped','beet
 function vocabScore(t){var w=norm(t).split(' '),s=0;w.forEach(function(x){if(VOCAB.indexOf(x)>=0)s+=1;});if(isCmd(norm(t)))s+=3;if(TEMP_RE.test(t))s+=10;return s;}
 function pickAlt(res){var best=null,bs=-1;for(var i=0;i<res.length;i++){var raw=res[i].transcript,f=fixVocab(raw),sc=vocabScore(f)-i*0.5+(f!==raw?0.2:0);if(sc>bs){bs=sc;best=f;}}return best==null?'':best;}
 var FIELDKW=/^(weather|pests?|disease|mites|varroa|treatments?|treated|notes?|comment|date)\b/;
-function isCmd(n,raw){if(!n)return false;if(raw&&isTempPhrase(raw))return true;if(CAM_OPEN.test(n)||CAM_SNAP.test(n)||/^((switch|flip|other|back|rear|hive|front|selfie) camera)$/.test(n))return true;if(/^(undo|scroll (up|down)|page (up|down)|(next|previous|prev) page|show numbers|hide numbers|(press|number|button|tap) \d+)$/.test(n))return true;
+function isCmd(n,raw){if(!n)return false;if(raw&&isTempPhrase(raw))return true;if(/^undo\b|\bundo$/.test(n))return true;if(CAM_OPEN.test(n)||CAM_SNAP.test(n)||/^((switch|flip|other|back|rear|hive|front|selfie) camera)$/.test(n))return true;if(/^(undo|scroll (up|down)|page (up|down)|(next|previous|prev) page|show numbers|hide numbers|(press|number|button|tap) \d+)$/.test(n))return true;
   if(/^(next|continue|back|previous|go back|save|done|finish|cancel|stop|go home|home|open home|photo|photos|take a? ?photo|add photos?|picture|camera|help|undo|undo last)( inspection| please)?$/.test(n))return true;
   if(FIELDKW.test(n))return true;
   if(/^queen\b/.test(n)&&!/^queen cells?\b/.test(n))return true;
@@ -509,15 +555,15 @@ function isCmd(n,raw){if(!n)return false;if(raw&&isTempPhrase(raw))return true;i
   var w=n.split(' ');if(w.length<=3&&w.some(function(x){return ['weak','medium','strong','solid','spotty','patchy'].some(function(o){return sim(x,o)>=0.85;});}))return true;
   return false;}
 var RESTART_RE=/^(restart|start over|start again|clear( this| that| it)?)$/;
-function clearField(el){var old=el.value;el.value='';el.dispatchEvent(new Event('input',{bubbles:true}));undoToast(el,old);}
+function clearField(el){var f=el.dataset&&el.dataset.f;if(f)commitF(f);var old=el.value;el.value='';el.dispatchEvent(new Event('input',{bubbles:true}));if(f)commitF(f);undoToast(el,old);}
 function undoToast(el,old){var o=document.querySelector('.toast');if(o)o.remove();clearTimeout(tt);var t=document.createElement('div');t.className='toast rtoast';t.setAttribute('role','status');
   t.innerHTML='<span class="grow">Cleared &mdash; speak again</span>'+(old?'<button type="button" class="undo">Undo</button>':'');document.body.appendChild(t);
-  var u=t.querySelector('.undo');if(u)u.onclick=function(){stopListen();if(document.body.contains(el)){el.value=old;el.dispatchEvent(new Event('input',{bubbles:true}));}t.remove();};
+  var u=t.querySelector('.undo');if(u)u.onclick=function(){stopListen();var f=el.dataset&&el.dataset.f;if(f&&draft&&route.name==='form'){t.remove();toast(fhUndo(f)||'Nothing to undo');return;}if(document.body.contains(el)){el.value=old;el.dispatchEvent(new Event('input',{bubbles:true}));}t.remove();};
   tt=setTimeout(function(){t.remove();},5000);}
 function restartField(el){if(!el)return;stopListen();clearField(el);
   if(hfOn){el.focus();hfShow('Hands-free listening','Cleared – speak again');return;}
   if(SR&&!insecure())dictateInto(el);else el.focus();}
-function dictateInto(el){if(!el)return;listen('Dictating into '+(el.placeholder?'the box':'field'),function(t){if(RESTART_RE.test(norm(t))){setTimeout(function(){restartField(el);},50);return;}var v=el.value;el.value=(v&&!/\s$/.test(v)?v+' ':v)+t;el.dispatchEvent(new Event('input',{bubbles:true}));if(el.dataset.f)commitF(el.dataset.f);},app.querySelector('.mic[data-target="'+el.id+'"]'));}
+function dictateInto(el){if(!el)return;if(hfOn){el.focus();hfShow('Hands-free listening','Speak – typing into '+((el.dataset.f&&TEXTF[el.dataset.f])||'the box'),true);return;}listen('Dictating into '+(el.placeholder?'the box':'field'),function(t){if(RESTART_RE.test(norm(t))){setTimeout(function(){restartField(el);},50);return;}var v=el.value;el.value=(v&&!/\s$/.test(v)?v+' ':v)+t;el.dispatchEvent(new Event('input',{bubbles:true}));if(el.dataset.f)commitF(el.dataset.f);},app.querySelector('.mic[data-target="'+el.id+'"]'),{cont:true});}
 
 var NUM={zero:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,first:1,second:2,third:3,fourth:4,fifth:5,to:2,too:2,for:4,won:1};
 function norm(s){return String(s).toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(Boolean).map(function(w){return NUM.hasOwnProperty(w)&&w!=='to'&&w!=='for'&&w!=='too'&&w!=='won'?String(NUM[w]):w;}).join(' ');}
@@ -548,7 +594,7 @@ function command(text){text=fixVocab(text);var t=norm(text),w=t.split(' ');
     for(var f in fields){var kw=fields[f].filter(function(k){return w[0]===k||sim(w[0],k)>=0.8;})[0];if(kw&&!(f==='weather'&&w.length>1&&WEATHER.some(function(x){return t.indexOf(x)>=0;})&&false)){
       var keepAll=/^(varroa|mites|disease)$/.test(kw);var restT=keepAll?text.trim():text.trim().split(/\s+/).slice(1).join(' ').replace(/^(is|are|was|were|:)\s+/i,'');setStep(FSTEP[f]);var el=document.getElementById('f_'+f);el.focus();
       if(f==='date')return 'Date field';
-      if(restT){el.value=(el.value?el.value.replace(/\s*$/,' '):'')+restT;el.dispatchEvent(new Event('input',{bubbles:true}));return TEXTF[f]+': “'+restT+'”';}
+      if(restT){commitF(f);el.value=(el.value?el.value.replace(/\s*$/,' '):'')+restT;el.dispatchEvent(new Event('input',{bubbles:true}));commitF(f);return TEXTF[f]+': “'+restT+'”';}
       setTimeout(function(){dictateInto(el);},300);return TEXTF[f]+': speak now';}}
     if(has(/^(done|finish|save inspection|finish inspection)$/)){submitInsp();return 'Finished – inspection saved';}
     if(has(/^save( draft)?$/)){saveDraftNow();return 'Saved draft ✓';}
@@ -572,7 +618,7 @@ function setSeg(f,v){if(draft&&draft[f]!==v)draftU(f,draft[f],cap(f.replace(/([A
 function addWeather(word){var el=document.getElementById('f_weather'),v=draft.weather||'';if(new RegExp('\\b'+word+'\\b','i').test(v))return;commitF('weather');draftU('weather',draft.weather||'','Weather + '+word);draft.weather=v?v.replace(/[\s,]*$/,'')+', '+word:cap(word);if(el)el.value=draft.weather;}
 
 /* ---------- actions ---------- */
-function newInsp(){var ex=readDraft();if(ex&&hive(ex.hive)){if(ex.hive===route.id)return resumeDraft(ex.hive);var here=route.id;return askConfirm('You have an unfinished inspection for “'+hive(ex.hive).name+'”. Discard it and start a new one here?','Yes, discard it',function(){clearDraft();route={name:'hive',id:here};newInsp();});}draft={step:0,date:today(),weather:'',strength:'',queenSeen:'',brood:'',honey:'',pests:'',treatments:'',notes:'',photos:[]};go({name:'form',id:route.id});}
+function newInsp(){var ex=readDraft();if(ex&&hive(ex.hive)){if(ex.hive===route.id)return resumeDraft(ex.hive);var here=route.id;return askConfirm('You have an unfinished inspection for “'+hive(ex.hive).name+'”. Discard it and start a new one here?','Yes, discard it',function(){clearDraft();route={name:'hive',id:here};newInsp();});}fhDrop('draft:'+route.id);draft={step:0,date:today(),weather:'',strength:'',queenSeen:'',brood:'',honey:'',pests:'',treatments:'',notes:'',photos:[]};go({name:'form',id:route.id});}
 function hasData(d){return !!(d&&((d.photos&&d.photos.length)||d.notes||d.weather||d.strength||d.queenSeen||d.brood||d.honey||d.pests||d.treatments));}
 function askConfirm(msg,yesLabel,onYes){var o=document.querySelector('.confirmOv');if(o)o.remove();o=document.createElement('div');o.className='pdfOv confirmOv';o.setAttribute('role','alertdialog');
   o.innerHTML='<div class="card"><div class="title" style="white-space:normal">'+esc(msg)+'</div><p class="meta" style="margin:6px 0 0">Say &ldquo;yes&rdquo; or &ldquo;no&rdquo;.</p><div class="bar"><button type="button" data-c="0" data-say="no|nope|keep|keep it|cancel|go back">No</button><button type="button" class="danger" data-c="1" data-say="yes|yeah|yep|yes please|confirm|ok">'+esc(yesLabel)+'</button></div></div>';
@@ -594,7 +640,7 @@ function exportPdf(hs,title){var pv=document.getElementById('printView');if(!pv)
   document.body.appendChild(o);}
 var DKEY='hiveNotes.draft';
 function storeDraft(){if(!draft||route.name!=='form')return false;var o={hive:route.id,t:Date.now(),d:draft};try{localStorage.setItem(DKEY,JSON.stringify(o));return true;}catch(e){try{o.d=Object.assign({},draft,{photos:[]});localStorage.setItem(DKEY,JSON.stringify(o));toast('Saved text ✓ (photos too large to keep in draft)',true);return 'nophotos';}catch(e2){toast('Could not save draft: storage full',true);return false;}}}
-function clearDraft(){try{localStorage.removeItem(DKEY);}catch(e){}}
+function clearDraft(){var o=readDraft();try{localStorage.removeItem(DKEY);}catch(e){}if(o&&o.hive)fhDrop('draft:'+o.hive);}
 function saveDraftNow(){var r=storeDraft();if(r===true)toast('Saved ✓');}
 function readDraft(){try{var o=JSON.parse(localStorage.getItem(DKEY));if(o&&o.d&&o.hive)return o;}catch(e){}return null;}
 function draftFor(id){var o=readDraft();return o&&o.hive===id?o:null;}
@@ -602,8 +648,8 @@ function resumeDraft(id){var o=draftFor(id);if(!o){toast('No saved draft for thi
 function leaveForm(target,noHist){if(cam)closeCamera(true);var id=route.id;if(hasData(draft)){storeDraft();toast('Draft saved — tap Resume inspection to continue');}else clearDraft();draft=null;dropDraftU();go(target||{name:'hive',id:id},noHist);}
 function restoreDraft(){try{var o=JSON.parse(localStorage.getItem(DKEY));if(o&&o.d&&hive(o.hive)){draft=Object.assign({step:0,photos:[]},o.d);if(!Array.isArray(draft.photos))draft.photos=[];route={name:'form',id:o.hive};return true;}if(o)clearDraft();}catch(e){clearDraft();}return false;}
 function cancelForm(){var id=route.id,done=function(){clearDraft();draft=null;dropDraftU();go({name:'hive',id:id});};if(confirmDiscard())return done();askConfirm('Discard this inspection? Everything entered will be lost.','Yes, discard',function(){done();toast('Inspection discarded');});}
-function submitInsp(){var hv=hive(route.id),ins=Object.assign({id:uid(),created:Date.now()},draft);delete ins.step;ins.date=ins.date||today();var bI=capH([hv.id]);hv.inspections.push(ins);
-  if(save()){clearDraft();draft=null;dropDraftU();pushH('Save inspection',bI);toast('Inspection saved');go({name:'hive',id:route.id});}}
+function submitInsp(){flushF();var hv=hive(route.id),ins=Object.assign({id:uid(),created:Date.now()},draft);delete ins.step;ins.date=ins.date||today();var bI=capH([hv.id]);hv.inspections.push(ins);
+  if(save()){fhMove('draft:'+hv.id,hv.id+':'+ins.id);clearDraft();draft=null;dropDraftU();pushH('Save inspection',bI);toast('Inspection saved');go({name:'hive',id:route.id});}}
 backBtn.onclick=function(){stopListen();if(route.name==='form')return leaveForm();
   if(route.name==='hive'||route.name==='addHive')go({name:'home'});else if(route.name==='insp')go({name:'hive',id:route.id});};
 
@@ -638,15 +684,16 @@ function hfUI(){hfBtn.setAttribute('aria-pressed',hfOn);hfBtn.innerHTML='Hands-f
   hfShow(hfOn?'Hands-free listening':'Tap to speak','');try{refitSoon();}catch(e){}}
 function setHF(on,quiet){on=!!on;if(on){if(!SR){voiceProblem('Voice input isn’t available in this browser.',GBOARD);on=false;}else if(insecure()){on=false;hfOn=false;hfUI();micBlocked(isFileProto()?'file':'insecure');return;}}
   hfOn=on;try{localStorage.setItem(HFKEY,on?'1':'0');}catch(e){}hfUI();clearTimeout(hfTimer);
-  if(on){stopListen();hfErrors=0;hfStart();checkPermDenied(function(){if(hfOn)micBlocked('denied');});if(!quiet)toast('Hands-free on: just speak. Tap the mic to go back to push-to-talk.');}else{hfStop();if(!quiet)toast('Push-to-talk: tap the mic to speak.');}}
+  if(on){stopListen();hfErrors=0;hfNet=0;hfAud=0;hfOther=0;hfStart();permDenied(function(){if(hfOn)micBlocked('denied');});if(!quiet)toast('Hands-free on: just speak. Tap the mic to go back to push-to-talk.');}else{hfStop();if(!quiet)toast('Push-to-talk: tap the mic to speak.');}}
 function hfStop(){clearTimeout(hfTimer);if(hfRec){var r=hfRec;hfRec=null;try{r.abort();}catch(e){}}}
-function hfSchedule(){clearTimeout(hfTimer);if(!hfOn||document.hidden)return;var d=Math.min(8000,300*Math.pow(2,hfErrors));hfTimer=setTimeout(hfStart,d);}
+var hfWorked=false,hfNet=0,hfAud=0,hfOther=0;
+function hfSchedule(){clearTimeout(hfTimer);if(!hfOn||document.hidden)return;var d=hfNet?Math.min(15000,1000*Math.pow(2,hfNet-1)):(hfAud||hfOther)?Math.min(15000,500*Math.pow(2,Math.max(hfAud,hfOther)-1)):250;hfTimer=setTimeout(hfStart,d);}
 function hfField(){var a=document.activeElement;return a&&app.contains(a)&&(a.tagName==='TEXTAREA'||(a.tagName==='INPUT'&&(!a.type||a.type==='text')))?a:null;}
 function hfHandle(t){t=fixVocab(t);var el=hfField(),n=norm(t);lastHeard=t;
   if(el&&!cam&&!document.querySelector('.confirmOv,.pdfOv,.overlay')){
     if(RESTART_RE.test(n)){clearField(el);hfShow('Hands-free listening',heardMsg(t,'Cleared box – speak again'),true);return;}
     var bx=n.split(' ').length<=3?matchButton(n,0.9):null;
-    if(!isCmd(n,t)&&!bx&&!/^(stop|stop listening|push to talk|hands free off)$/.test(n)){var v=el.value;el.value=(v&&!/\s$/.test(v)?v+' ':v)+t.trim();el.dispatchEvent(new Event('input',{bubbles:true}));var lb=(el.dataset.f&&TEXTF[el.dataset.f])||'box';hfShow('Hands-free listening',heardMsg(t,'added to '+lb),true);return;}
+    if(!isCmd(n,t)&&!bx&&!/^(stop|stop listening|push to talk|hands free off)$/.test(n)){if(el.dataset.f)commitF(el.dataset.f);var v=el.value;el.value=(v&&!/\s$/.test(v)?v+' ':v)+t.trim();el.dispatchEvent(new Event('input',{bubbles:true}));if(el.dataset.f)commitF(el.dataset.f);var lb=(el.dataset.f&&TEXTF[el.dataset.f])||'box';hfShow('Hands-free listening',heardMsg(t,'added to '+lb),true);return;}
     if(el.dataset.f)commitF(el.dataset.f);}
   var r=voiceAct(t);hfShow('Hands-free listening',heardMsg(t,r?r:'no match – try a button name, or say “help”'),true);}
 
@@ -724,7 +771,9 @@ function voiceAct(t){t=fixVocab(t);var n=norm(t);if(!n)return null;
   var cf=document.querySelector('.confirmOv');
   if(cf){var yb=/^(yes|yeah|yep|yup|ok|okay|confirm|sure|do it|yes please|yes delete|yes discard)\b/.test(n),nb=/^(no|nope|keep|cancel|don t|dont|stop|go back)\b/.test(n);
     if(yb){cf.querySelector('[data-c="1"]').click();return 'Yes – confirmed';}if(nb){cf.querySelector('[data-c="0"]').click();return 'No – kept';}return 'Say “yes” or “no”';}
-  if(n==='undo'){var top=ustack[ustack.length-1];undoLast();return top&&!(route.name==='form'&&top.t!=='draft')?'Undo: '+top.label:'Nothing to undo';}
+  var um=n.match(/^undo (?:the |my )?(.+)$/)||n.match(/^(.+?) undo$/);
+  if(um){var tf=fieldWord(um[1]);if(tf){if(route.name!=='form'||!draft){toast('Open the inspection first to undo '+(FNAMES[tf]||tf),true);return 'Open the inspection first';}var m1=fhUndo(tf)||('Nothing to undo for '+FNAMES[tf]);toast(m1);return m1;}}
+  if(n==='undo'){if(route.name==='form'&&draft){var m2=plainUndoForm();toast(m2);return m2;}var top=ustack[ustack.length-1];undoLast();return !top?'Nothing to undo':top.sid!==SID?'Undo “'+top.label+'”? Say yes or no':'Undo: '+top.label;}
   if(/^(stop|stop listening|push to talk|hands free off)$/.test(n)){setHF(false);return 'Hands-free off';}
   if(/^(hands free|hands free on)$/.test(n)){setHF(true);return 'Hands-free on';}
   if(/^(scroll down|page down|next page|more|show more|go down)$/.test(n))return pgMove(1);
@@ -761,19 +810,23 @@ var rfT=0,rfBusy=false;function refitSoon(){if(rfT)return;rfT=requestAnimationFr
 function refit(){if(rfBusy)return;rfBusy=true;try{document.querySelectorAll('.panel,.step,.obody').forEach(function(c){c.classList.add('pg');});document.querySelectorAll('.pg').forEach(fitPg);document.querySelectorAll('.pager').forEach(function(p){var c=p.previousElementSibling;if(!c||!c.classList||!c.classList.contains('pg'))p.remove();});numberBtns();}catch(e){}rfBusy=false;}
 new MutationObserver(function(ms){if(rfBusy)return;for(var i=0;i<ms.length;i++){var t=ms[i].target;if(t.nodeType===1&&(t.closest&&t.closest('.pager,#hfStatus,.toast,#listen')))continue;if(ms[i].type==='attributes'&&ms[i].attributeName==='data-n')continue;refitSoon();return;}}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','class','data-n']});
 addEventListener('resize',function(){document.querySelectorAll('.pg').forEach(function(c){c._sig=null;});refitSoon();});
-function hfStart(){if(!hfOn||document.hidden||hfRec)return;requestWakeLock();var r;try{r=new SR();}catch(e){setHF(false,true);voiceProblem('Could not start voice input.',GBOARD);return;}
-  hfRec=r;r.lang=navigator.language||'en-US';r.continuous=true;r.interimResults=true;r.maxAlternatives=5;var fatal=false,gotAny=false,hst=false;
-  var hwd=setTimeout(function(){if(hfRec===r&&!hst&&hfOn){fatal=true;try{r.abort();}catch(e){}micBlocked('timeout');}},5000);
-  r.onstart=function(){hst=true;clearTimeout(hwd);clearBlock();if(hfRec===r)hfShow('Hands-free listening');};
-  r.onresult=function(e){if(hfRec!==r)return;var tmp='';for(var i=e.resultIndex;i<e.results.length;i++){var t=e.results[i][0].transcript;if(e.results[i].isFinal){gotAny=true;hfErrors=0;hfHandle(pickAlt(e.results[i]));}else tmp+=t;}if(tmp)hfShow('Hands-free listening',tmp.trim()+'…');};
+function hfStart(){if(!hfOn||document.hidden||hfRec||rec||pttRetry)return;requestWakeLock();
+  if(navigator.onLine===false){hfShow('Waiting for signal…','No internet – voice will resume automatically');clearTimeout(hfTimer);hfTimer=setTimeout(hfStart,15000);return;}
+  var r;try{r=new SR();}catch(e){setHF(false,true);voiceProblem('Could not start voice input.',GBOARD);return;}
+  hfRec=r;r.lang=navigator.language||'en-US';r.continuous=true;r.interimResults=true;r.maxAlternatives=5;var fatal=false,hst=false;
+  var hwd=setTimeout(function(){if(hfRec===r&&!hst&&hfOn){hfRec=null;try{r.abort();}catch(e){}hfOther++;hfShow('Reconnecting voice…');hfSchedule();}},5000);
+  r.onstart=function(){hst=true;clearTimeout(hwd);if(hfRec!==r)return;hfErrors=0;hfNet=0;hfAud=0;hfOther=0;clearBlock();hfShow('Hands-free listening');};
+  r.onresult=function(e){if(hfRec!==r)return;var tmp='';for(var i=e.resultIndex;i<e.results.length;i++){var t=e.results[i][0].transcript;if(e.results[i].isFinal){hfErrors=0;hfWorked=true;voiceWorked=true;hfHandle(pickAlt(e.results[i]));}else tmp+=t;}if(tmp)hfShow('Hands-free listening',tmp.trim()+'…');};
   r.onerror=function(e){if(hfRec!==r)return;var er=e.error;
-    if(er==='not-allowed'||er==='service-not-allowed'){fatal=true;micBlocked(er);return;}
-    if(er==='audio-capture'||er==='language-not-supported'){fatal=true;setHF(false,true);voiceProblem(VERR[er],GBOARD);return;}
-    if(er==='no-speech'||er==='aborted')return;hfErrors++;hfShow('Hands-free: retrying…',VERR[er]||er);};
-  r.onend=function(){if(hfRec!==r)return;hfRec=null;if(fatal||!hfOn)return;
-    if(hfErrors>=4){setHF(false,true);voiceProblem('Hands-free stopped after repeated errors. '+(VERR.network),GBOARD);return;}
-    hfSchedule();};
-  try{r.start();}catch(e){hfRec=null;hfErrors++;if(hfErrors>=4){micBlocked('start');}else hfSchedule();}}
+    if(er==='not-allowed'||er==='service-not-allowed'){if(!hfWorked&&!voiceWorked){fatal=true;clearTimeout(hwd);micBlocked(er);return;}permDenied(function(){if(hfOn)micBlocked('denied');});hfOther++;hfShow('Reconnecting voice…');return;}
+    if(er==='language-not-supported'){fatal=true;setHF(false,true);voiceProblem(VERR[er],GBOARD);return;}
+    if(er==='audio-capture'){hfAud++;if(hfAud>=5){fatal=true;setHF(false,true);voiceProblem(VERR[er],GBOARD);return;}hfShow('Reconnecting voice…');return;}
+    if(er==='network'){hfNet++;hfShow('Waiting for signal…','Voice will resume automatically');return;}
+    if(er==='no-speech'||er==='aborted')return;hfOther++;hfShow('Reconnecting voice…',VERR[er]||er);};
+  r.onend=function(){clearTimeout(hwd);if(hfRec!==r)return;hfRec=null;if(fatal||!hfOn)return;hfSchedule();};
+  try{r.start();}catch(e){clearTimeout(hwd);hfRec=null;hfOther++;hfShow('Reconnecting voice…');hfSchedule();}}
+addEventListener('offline',function(){if(hfOn){hfStop();hfShow('Waiting for signal…','No internet – voice will resume automatically');}});
+addEventListener('online',function(){if(hfOn){hfNet=0;hfStop();hfStart();}});
 document.addEventListener('visibilitychange',function(){if(!hfOn)return;if(document.hidden){hfStop();hfShow('Hands-free paused');}else{hfErrors=0;hfStart();}});
 hfBtn.onclick=function(){setHF(!hfOn);};
 micBtn.onclick=function(){if(hfOn){setHF(false);return;}listen(route.name==='form'?'Say an option, e.g. “strong”, “low on stores”, “next”':'Say e.g. “open hive 1” or “add inspection”',function(t){t=fixVocab(t);var r=voiceAct(t);toast(r?'Heard “'+t+'” → '+r:'Heard “'+t+'” – no match. Say a button name, or “help”.',!r);});};
@@ -797,12 +850,12 @@ app.addEventListener('click',function(e){var b=e.target.closest('[data-act]');if
   else if(a==='wx')addWeather(b.dataset.v);
   else if(a==='seg'){var f=b.dataset.f;setSeg(f,draft[f]===b.dataset.v?'':b.dataset.v);}
   else if(a==='camOpen')openCamera(false);
-  else if(a==='rmPhoto'){draftU('photos',draft.photos,'Remove photo');draft.photos.splice(+b.dataset.ix,1);document.getElementById('thumbs').innerHTML=thumbsHtml(draft.photos,true);}
+  else if(a==='rmPhoto'){var rix=+b.dataset.ix;fhPush('photos',{op:'rm',ix:rix,d:draft.photos[rix]},'Remove photo');draft.photos.splice(rix,1);storeDraft();document.getElementById('thumbs').innerHTML=thumbsHtml(draft.photos,true);}
   else if(a==='view'){var ph=route.name==='form'?draft.photos:curInsp().photos;viewer(ph[+b.dataset.ix]);}
-  else if(a==='delHive'){var h=hive(route.id);askConfirm('Delete “'+h.name+'” and all '+h.inspections.length+' inspection(s)?','Yes, delete hive',function(){var bH=capH([h.id]);state.hives=state.hives.filter(function(x){return x!==h;});if(save())pushH('Delete hive “'+h.name+'”',bH);toast('Hive deleted');go({name:'home'});});}
-  else if(a==='delInsp'){askConfirm('Delete this inspection and its photos?','Yes, delete',function(){var hv=hive(route.id),bD=capH([hv.id]);hv.inspections=hv.inspections.filter(function(x){return x.id!==route.iid;});if(save())pushH('Delete inspection',bD);toast('Inspection deleted');go({name:'hive',id:route.id});});}
+  else if(a==='delHive'){var h=hive(route.id);askConfirm('Delete “'+h.name+'” and all '+h.inspections.length+' inspection(s)?','Yes, delete hive',function(){fhDrop('draft:'+h.id);fhDrop(h.id);var bH=capH([h.id]);state.hives=state.hives.filter(function(x){return x!==h;});if(save())pushH('Delete hive “'+h.name+'”',bH);toast('Hive deleted');go({name:'home'});});}
+  else if(a==='delInsp'){askConfirm('Delete this inspection and its photos?','Yes, delete',function(){fhDrop(route.id+':'+route.iid);var hv=hive(route.id),bD=capH([hv.id]);hv.inspections=hv.inspections.filter(function(x){return x.id!==route.iid;});if(save())pushH('Delete inspection',bD);toast('Inspection deleted');go({name:'hive',id:route.id});});}
 });
-app.addEventListener('input',function(e){var f=e.target.dataset&&e.target.dataset.f;if(f&&draft&&route.name==='form'){draft[f]=e.target.value;clearTimeout(adT);adT=setTimeout(storeDraft,600);}});var adT;
+app.addEventListener('input',function(e){var f=e.target.dataset&&e.target.dataset.f;if(f&&draft&&route.name==='form'){draft[f]=e.target.value;clearTimeout(adT);adT=setTimeout(storeDraft,600);if(TEXTF[f]){clearTimeout(cfT[f]);cfT[f]=setTimeout(function(){commitF(f);},1500);}}});var adT;
 app.addEventListener('change',function(e){if(e.target.id!=='f_photos')return;var files=[].slice.call(e.target.files||[]);e.target.value='';if(!files.length)return;
   var busy=document.getElementById('busy');busy.hidden=false;
   var bP=draft.photos.slice();files.reduce(function(p,f){return p.then(function(){return resize(f,1024,0.7).then(function(d){draft.photos.push(d);},function(){toast('Skipped a file that could not be read as an image.',true);});});},Promise.resolve())
@@ -811,7 +864,7 @@ app.addEventListener('submit',function(e){e.preventDefault();
   if(e.target.id==='hiveForm'){var n=document.getElementById('hName').value.trim();if(!n){toast('Please enter a hive name',true);return;}
     var h={id:uid(),name:n,notes:document.getElementById('hNotes').value.trim(),created:Date.now(),inspections:[]};state.hives.push(h);if(save()){pushH('Add hive “'+n+'”',[{id:h.id,ix:-1,j:null}]);toast('Hive added');go({name:'hive',id:h.id});}}
   else if(e.target.id==='inspForm'){if((draft.step||0)<LASTSTEP)setStep(draft.step+1);else submitInsp();}});
-window.HiveNotes={restartField:restartField,openMicGuide:openMicGuide,openSetup:openSetup,uaKind:uaKind,fixSteps:fixSteps,micBlocked:micBlocked,setHF:setHF,isHF:function(){return hfOn;},resize:resize,validate:validate,importHives:importHives,command:command,getState:function(){return state;},getDraft:function(){return draft;},camOpen:function(){return !!cam;},camFacing:function(){return cam&&cam.facing;},camTracks:function(){return cam&&cam.stream?cam.stream.getTracks().map(function(t){return t.readyState;}):null;},voiceAct:voiceAct,fixTemp:fixTemp,refit:refit,voiceButtons:voiceButtons,hfHandle:hfHandle,fixVocab:fixVocab,pickAlt:pickAlt,isCmd:isCmd,undo:undoLast,undoStack:function(){return ustack;},KEY:KEY,saveDraft:saveDraftNow,exportPdf:exportPdf};
+window.HiveNotes={restartField:restartField,openMicGuide:openMicGuide,openSetup:openSetup,uaKind:uaKind,fixSteps:fixSteps,micBlocked:micBlocked,setHF:setHF,isHF:function(){return hfOn;},resize:resize,validate:validate,importHives:importHives,command:command,getState:function(){return state;},getDraft:function(){return draft;},fieldHist:function(){return fh;},camOpen:function(){return !!cam;},camFacing:function(){return cam&&cam.facing;},camTracks:function(){return cam&&cam.stream?cam.stream.getTracks().map(function(t){return t.readyState;}):null;},voiceAct:voiceAct,fixTemp:fixTemp,refit:refit,voiceButtons:voiceButtons,hfHandle:hfHandle,fixVocab:fixVocab,pickAlt:pickAlt,isCmd:isCmd,undo:undoLast,undoStack:function(){return ustack;},KEY:KEY,saveDraft:saveDraftNow,exportPdf:exportPdf};
 (function(){var o=readDraft();if(o&&!hive(o.hive))clearDraft();})();
 try{history.replaceState({d:0,r:{name:'home'}},'');}catch(e){}render();
 document.querySelectorAll('.homeTap').forEach(function(el){var f=function(){stopListen();if(route.name==='form')leaveForm({name:'home'});else go({name:'home'});};el.onclick=f;el.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();f();}};});
