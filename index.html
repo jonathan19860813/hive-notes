@@ -164,6 +164,21 @@ ol.setup{padding-left:24px;margin:0}ol.setup li{margin:0 0 12px;color:var(--mute
  #printView .pph img{width:30%;margin:6px 2% 0 0;border:1px solid #ccc}
 }
 
+.pg{overflow:hidden!important}
+.pager{flex:none;display:flex;align-items:center;gap:8px;padding-top:6px}.pager button{flex:1;min-height:52px;font-size:.95rem;padding:6px 8px}.pager span{flex:none;color:var(--muted);font-size:.85rem;font-weight:700;min-width:54px;text-align:center}
+.pager button[disabled]{opacity:.35;cursor:default}
+.overlay,.pdfOv{bottom:calc(96px + env(safe-area-inset-bottom))!important}
+.overlay .obody{display:block}
+.gfr svg{max-height:34vh;width:auto!important}
+.prog{flex:none;display:flex;align-items:center;gap:8px;margin:0 0 4px;font-size:.9rem;color:var(--amber2);font-weight:800}.prog .dots{display:flex;gap:4px;flex:1;justify-content:flex-end}.prog .dots i{width:9px;height:9px;border-radius:50%;background:var(--line)}.prog .dots i.on{background:var(--amber)}.prog .dots i.done{background:#8a6a1e}
+.step .seg button{min-height:68px;font-size:1.08rem;flex:1 1 40%}
+.step .hint{color:var(--muted);font-size:.82rem;margin:8px 0 0}
+.step textarea{height:120px}
+.kv{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}.kv b{color:var(--muted);font-weight:600;min-width:100px;flex:none}.kv span{white-space:pre-wrap;word-break:break-word}
+.bar button{font-size:.92rem;padding:8px 8px}
+[data-n]{position:relative}[data-n]::after{content:attr(data-n);position:absolute;top:-7px;left:-7px;min-width:22px;height:22px;padding:0 4px;border-radius:11px;background:var(--amber);color:var(--amberInk);border:2px solid var(--bg);font-size:.72rem;line-height:18px;text-align:center;font-weight:800;pointer-events:none;z-index:3;box-shadow:none}
+.confirmOv{z-index:60}
+@media (max-height:680px){h1{font-size:1.25rem}.sub{margin-bottom:4px;-webkit-line-clamp:1}.step textarea{height:92px}.step .seg button{min-height:60px}.resumeBar{padding:6px 10px;margin-bottom:6px}.card{padding:10px 12px;margin-bottom:8px}}
 .saveDraft{flex:0 0 auto!important;background:transparent;border:2px solid var(--honey,#ffb627);color:var(--honey,#ffb627);font-weight:700}
 .instBtn{width:100%}
 @media (display-mode: standalone){.instOnly{display:none!important}header{padding-top:max(10px,env(safe-area-inset-top))}}
@@ -176,9 +191,9 @@ html.standalone .instOnly{display:none!important}
 <header>
   <div class="logo homeTap" data-home="1" aria-hidden="true"><i></i><i></i><i></i></div>
   <div class="brand homeTap" data-home="1" role="button" tabindex="0" aria-label="Hive Notes – go to Home">Hive Notes</div>
-  <button id="backBtn" class="icon" hidden aria-label="Back">&#8592;</button>
+  <button id="backBtn" class="icon" hidden aria-label="Back" data-say="back|go back">&#8592;</button>
   <button id="undoBtn" type="button" class="undoBtn" hidden aria-disabled="true" aria-label="Undo last change" title="Undo last change">&#8630;</button>
-  <button id="helpBtn" class="icon" aria-label="Help and backup" title="Help &amp; backup">?</button>
+  <button id="helpBtn" class="icon" aria-label="Help and backup" data-say="help|open help|backup" title="Help &amp; backup">?</button>
 </header>
 <main id="app"></main>
 <div id="dock"><div id="hfStatus" aria-live="polite"><b>Tap to speak</b><span class="hd"></span></div><button id="micBtn" aria-label="Voice: tap and speak" title="Voice">&#127908;</button><button id="hfBtn" type="button" aria-pressed="false" title="Hands-free mode">Hands-free<br>Off</button></div>
@@ -219,7 +234,7 @@ var popSkip=0;
 function go(r,noHist){route=r;render();if(noHist)return;try{var st=history.state,cd=st&&typeof st.d==='number'?st.d:0,nd=rDepth(r),rs={d:nd,r:r};
   if(nd>cd){if(nd===2&&cd===0&&r.id)history.pushState({d:1,r:{name:'hive',id:r.id}},'');history.pushState(rs,'');}else if(nd===cd)history.replaceState(rs,'');else{popSkip=1;history.go(nd-cd);setTimeout(function(){if(popSkip){popSkip=0;history.replaceState({d:rDepth(route),r:route},'');}},400);}}catch(e){}}
 function render(){backBtn.hidden=route.name==='home';var h=({home:vHome,addHive:vAddHive,hive:vHive,form:vForm,insp:vInsp}[route.name]||vHome)();
-  app.innerHTML='<section class="screen">'+h+'</section>';if(route.name==='form'){showStep();baseF={};Object.keys(TEXTF).forEach(function(k){baseF[k]=draft[k]||'';});}undoUI();}
+  app.innerHTML='<section class="screen">'+h+'</section>';if(route.name==='form'){showStep();baseF={};Object.keys(TEXTF).forEach(function(k){baseF[k]=draft[k]||'';});}undoUI();refitSoon();}
 /* ---------- global undo stack ---------- */
 var UKEY='hiveNotes.undo',UMAX=20,UBUDGET=900000,ustack=loadU(),baseF={};
 function loadU(){try{var a=JSON.parse(localStorage.getItem(UKEY));if(Array.isArray(a))return a.filter(function(e){return e&&e.t!=='draft';});}catch(e){}return[];}
@@ -227,21 +242,21 @@ function saveU(){var p=ustack.filter(function(e){return e.t!=='draft';});
   while(p.length&&JSON.stringify(p).length>UBUDGET)p.shift();
   for(;;){try{localStorage.setItem(UKEY,JSON.stringify(p));return;}catch(e){if(!p.length){try{localStorage.removeItem(UKEY);}catch(x){}return;}p.shift();}}}
 function undoHtml(){return '<button type="button" class="undoBtn" aria-label="Undo last change" title="Undo last change">&#8630;</button>';}
-function undoUI(){var off=!ustack.length,top=ustack[ustack.length-1];document.querySelectorAll('.undoBtn').forEach(function(b){
+function undoUI(){var top=ustack[ustack.length-1],off=!top||(route.name==='form'&&top.t!=='draft');document.querySelectorAll('.undoBtn').forEach(function(b){
   b.hidden=b.id==='undoBtn'&&route.name==='home'&&!state.hives.length&&!document.querySelector('.overlay');b.setAttribute('aria-disabled',off?'true':'false');
-  b.title=off?'Nothing to undo':'Undo: '+top.label;b.setAttribute('aria-label',b.title);});}
+  b.title=off?'Nothing to undo':'Undo: '+top.label;b.dataset.say='undo|undo that|undo last';b.setAttribute('aria-label',b.title);});}
 function capH(ids){return ids.map(function(id){var ix=-1;state.hives.forEach(function(h,i){if(h.id===id)ix=i;});return{id:id,ix:ix,j:ix<0?null:JSON.stringify(state.hives[ix])};});}
 function pushU(e){e.r=JSON.parse(JSON.stringify(route));ustack.push(e);while(ustack.length>UMAX)ustack.shift();if(e.t!=='draft')saveU();undoUI();}
 function pushH(label,items){pushU({t:'hives',label:label,items:items});}
 function dropDraftU(){var n=ustack.length;ustack=ustack.filter(function(e){return e.t!=='draft';});if(n!==ustack.length)undoUI();}
-function undoLast(){var e=ustack.pop();if(!e){undoUI();return;}
+function undoLast(){var tp=ustack[ustack.length-1];if(!tp){undoUI();toast('Nothing to undo');return;}if(route.name==='form'&&tp.t!=='draft'){toast('Nothing to undo in this inspection yet');return;}var e=ustack.pop();
   if(e.t==='draft'){if(!draft||route.name!=='form'){undoUI();return;}draft[e.f]=e.v;var a=document.activeElement;if(a&&a.blur)a.blur();render();toast('Undid: '+e.label);return;}
   var before=JSON.stringify(state.hives);
   if(e.t==='all')state.hives=JSON.parse(e.j);
   else e.items.slice().reverse().forEach(function(it){state.hives=state.hives.filter(function(h){return h.id!==it.id;});if(it.j!=null)state.hives.splice(Math.min(it.ix,state.hives.length),0,JSON.parse(it.j));});
   if(!save()){state.hives=JSON.parse(before);ustack.push(e);undoUI();return;}
   saveU();if(route.name==='form'){draft=null;}dropDraftU();
-  var r=e.r||{name:'home'};if(r.name==='form'||r.name==='addHive')r={name:r.id&&hive(r.id)?'hive':'home',id:r.id};
+  var r=JSON.parse(JSON.stringify(route));if(r.name==='addHive')r={name:'home'};
   if(r.name==='insp'&&!(hive(r.id)&&hive(r.id).inspections.some(function(i){return i.id===r.iid;})))r={name:hive(r.id)?'hive':'home',id:r.id};
   if(r.name==='hive'&&!hive(r.id))r={name:'home'};
   document.querySelectorAll('.overlay').forEach(function(o){if(!o.querySelector('.undoBtn'))return;if(e.t!=='all')o.remove();});
@@ -251,38 +266,46 @@ function draftU(f,old,label){if(!draft)return;pushU({t:'draft',f:f,v:Array.isArr
 function commitF(f){if(!draft||route.name!=='form'||!TEXTF[f])return;var v=draft[f]||'',o=baseF[f]||'';if(v===o)return;draftU(f,o,TEXTF[f]+' edit');baseF[f]=v;}
 app.addEventListener('focusout',function(e){var f=e.target.dataset&&e.target.dataset.f;if(f)commitF(f);});
 function vHome(){var n=state.hives.length;
-  var dr=readDraft(),dh=dr&&hive(dr.hive);var s='<h1>Your hives</h1><p class="sub">'+n+' hive'+(n===1?'':'s')+' &middot; ~'+usage()+' KB of ~5 MB used</p>'+(dh?'<div class="resumeBar"><div class="grow">Unfinished inspection for <b>'+esc(dh.name)+'</b></div><button class="primary" data-act="resume" data-id="'+dh.id+'">&#9654; Resume</button></div>':'')+'<div class="panel">';
+  var dr=readDraft(),dh=dr&&hive(dr.hive);var s='<h1>Your hives</h1><p class="sub">'+n+' hive'+(n===1?'':'s')+' &middot; ~'+usage()+' KB of ~5 MB used</p>'+(dh?'<div class="resumeBar"><div class="grow">Unfinished inspection for <b>'+esc(dh.name)+'</b></div><button class="primary" data-act="resume" data-say="resume|resume inspection|continue inspection" data-id="'+dh.id+'">&#9654; Resume</button></div>':'')+'<div class="panel">';
   if(!n)s+=empty('hive','No hives yet','Add your first hive to start logging inspections. Tip: tap &#127908; and say &ldquo;add hive&rdquo;.','+ Add your first hive','addHive');
   state.hives.forEach(function(h){var c=h.inspections.length,last=c?h.inspections.slice().sort(cmp)[0]:null;
-    s+='<button class="card tap" data-act="openHive" data-id="'+h.id+'"><div class="row"><div class="grow"><div class="title">'+esc(h.name)+'</div><div class="meta">'+c+' inspection'+(c===1?'':'s')+(last?' &middot; last '+esc(fmtDate(last.date)):'')+'</div>'+(last&&last.strength?'<span class="pill '+esc(last.strength)+'">'+esc(last.strength)+'</span>':'')+'</div><span class="chev">&rsaquo;</span></div></button>';});
-  s+='</div>';if(n)s+='<div class="bar"><button class="pdfBtn" data-act="pdfAll">&#128196; Save to PDF</button><button class="primary" data-act="addHive">+ Add hive</button></div>';return s;}
+    s+='<button class="card tap" data-act="openHive" data-id="'+h.id+'" data-say="'+esc(h.name)+'|open '+esc(h.name)+'"><div class="row"><div class="grow"><div class="title">'+esc(h.name)+'</div><div class="meta">'+c+' inspection'+(c===1?'':'s')+(last?' &middot; last '+esc(fmtDate(last.date)):'')+'</div>'+(last&&last.strength?'<span class="pill '+esc(last.strength)+'">'+esc(last.strength)+'</span>':'')+'</div><span class="chev">&rsaquo;</span></div></button>';});
+  s+='</div>';if(n)s+='<div class="bar"><button class="pdfBtn" data-act="pdfAll" data-say="save to pdf|pdf|print|export pdf">&#128196; Save to PDF</button><button class="primary" data-act="addHive">+ Add hive</button></div>';return s;}
 function micFor(id){return '<button type="button" class="mic" data-act="dictate" data-target="'+id+'" aria-label="Dictate">&#127908;</button><button type="button" class="rst" data-act="restart" data-target="'+id+'" aria-label="Clear this field and dictate again" title="Restart: clear and speak again">&#8634;</button>';}
 function vAddHive(){return '<h1>New hive</h1><form id="hiveForm" class="screen" style="animation:none"><div class="panel"><label for="hName">Hive name *</label><div class="fr"><input id="hName" maxlength="80" placeholder="e.g. Hive 1 – Orchard">'+micFor('hName')+'</div><label for="hNotes">Notes (optional)</label><div class="fr"><textarea id="hNotes" placeholder="Location, origin, queen info…"></textarea>'+micFor('hNotes')+'</div></div><div class="bar"><button type="button" data-act="home">Cancel</button><button class="primary" type="submit">Save hive</button></div></form>';}
 function vHive(){var h=hive(route.id);if(!h){route={name:'home'};return vHome();}
-  var s='<h1>'+esc(h.name)+'</h1>'+(h.notes?'<p class="sub">'+esc(h.notes)+'</p>':'<p class="sub">Inspection history</p>')+(draftFor(h.id)?'<div class="resumeBar"><div class="grow"><b>Unfinished inspection</b><div class="meta">Your draft is saved.</div></div><button class="primary" data-act="resume" data-id="'+h.id+'">&#9654; Resume inspection</button></div>':'')+'<div class="panel">';
+  var s='<h1>'+esc(h.name)+'</h1>'+(h.notes?'<p class="sub">'+esc(h.notes)+'</p>':'<p class="sub">Inspection history</p>')+(draftFor(h.id)?'<div class="resumeBar"><div class="grow"><b>Unfinished inspection</b><div class="meta">Your draft is saved.</div></div><button class="primary" data-act="resume" data-say="resume|resume inspection|continue inspection" data-id="'+h.id+'">&#9654; Resume inspection</button></div>':'')+'<div class="panel">';
   if(!h.inspections.length)s+=empty('note','No inspections yet','Record what you see on your next visit to this hive.','+ Add first inspection','newInsp');
-  h.inspections.slice().sort(cmp).forEach(function(i){s+='<button class="card tap" data-act="openInsp" data-id="'+i.id+'"><div class="row"><div class="grow"><div class="title">'+esc(fmtDate(i.date))+'</div><div class="meta">'+[i.weather,i.queenSeen==='yes'?'Queen seen':i.queenSeen==='no'?'Queen not seen':'',i.photos.length?i.photos.length+' photo'+(i.photos.length>1?'s':''):''].filter(Boolean).map(esc).join(' &middot; ')+'</div>'+(i.strength?'<span class="pill '+esc(i.strength)+'">'+esc(i.strength)+'</span>':'')+'</div><span class="chev">&rsaquo;</span></div></button>';});
-  return s+'</div><div class="bar"><button class="danger" data-act="delHive">Delete hive</button>'+(h.inspections.length?'<button class="pdfBtn" data-act="pdfHive">&#128196; Save to PDF</button>':'')+''+(h.inspections.length?'<button class="primary" data-act="newInsp">+ Inspection</button>':'')+'</div>';}
+  h.inspections.slice().sort(cmp).forEach(function(i){s+='<button class="card tap" data-act="openInsp" data-id="'+i.id+'" data-say="'+esc(fmtDate(i.date))+'"><div class="row"><div class="grow"><div class="title">'+esc(fmtDate(i.date))+'</div><div class="meta">'+[i.weather,i.queenSeen==='yes'?'Queen seen':i.queenSeen==='no'?'Queen not seen':'',i.photos.length?i.photos.length+' photo'+(i.photos.length>1?'s':''):''].filter(Boolean).map(esc).join(' &middot; ')+'</div>'+(i.strength?'<span class="pill '+esc(i.strength)+'">'+esc(i.strength)+'</span>':'')+'</div><span class="chev">&rsaquo;</span></div></button>';});
+  return s+'</div><div class="bar"><button class="danger" data-act="delHive" data-say="delete hive|remove hive">Delete hive</button>'+(h.inspections.length?'<button class="pdfBtn" data-act="pdfHive" data-say="save to pdf|pdf|print|export pdf">&#128196; Save to PDF</button>':'')+''+(h.inspections.length?'<button class="primary" data-act="newInsp">+ Inspection</button>':'')+'</div>';}
 function seg(field,opts,labels){return '<div class="seg" role="group">'+opts.map(function(o,ix){return '<button type="button" data-act="seg" data-f="'+field+'" data-v="'+o+'" aria-pressed="'+(draft[field]===o)+'">'+(labels?labels[ix]:cap(o))+'</button>';}).join('')+'</div>';}
 function tf(id,ph,ta){return '<label for="f_'+id+'">'+TEXTF[id]+'</label><div class="fr">'+(ta?'<textarea id="f_'+id+'" data-f="'+id+'" placeholder="'+ph+'">'+esc(draft[id])+'</textarea>':'<input id="f_'+id+'" data-f="'+id+'" placeholder="'+ph+'" value="'+esc(draft[id])+'">')+micFor('f_'+id)+'</div>';}
-var STEPS=['Colony','Health','Notes & photos'];
+var STEPS=['Date & strength','Weather','Queen','Brood','Honey stores','Pests','Treatments','Notes','Photos'],LASTSTEP=STEPS.length-1;
+var FSTEP={date:0,strength:0,weather:1,queenSeen:2,brood:3,honey:4,pests:5,treatments:6,notes:7,photos:8};
+function stp(k,html,hint){return '<div class="step" data-step="'+k+'"'+(k?' hidden':'')+'>'+html+'<p class="hint">'+(hint||'Say an option, or &ldquo;next&rdquo; / &ldquo;back&rdquo;.')+'</p></div>';}
 function vForm(){var h=hive(route.id);
-  return '<h1>New inspection</h1><p class="sub">'+esc(h.name)+'</p><div class="tabs">'+STEPS.map(function(t,ix){return '<button type="button" data-act="step" data-ix="'+ix+'">'+(ix+1)+'. '+t+'</button>';}).join('')+'</div><form id="inspForm" class="screen" style="animation:none">'+
-  '<div class="step" data-step="0"><label for="f_date">Date</label><input type="date" id="f_date" data-f="date" value="'+esc(draft.date)+'">'+tf('weather','Sunny, 24°C…')+'<div class="chips">'+WEATHER.slice(0,6).map(function(w){return '<button type="button" data-act="wx" data-v="'+w+'">'+cap(w)+'</button>';}).join('')+'</div>'+
-  '<div class="lbl">Colony strength</div>'+seg('strength',['weak','medium','strong'])+'<div class="lbl">Queen seen?</div>'+seg('queenSeen',['yes','no'],['Yes, seen','Not seen'])+'</div>'+
-  '<div class="step" data-step="1" hidden><div class="lbl">Brood pattern</div>'+seg('brood',BROOD,['Solid','Spotty','Patchy','None'])+'<div class="lbl">Honey stores</div>'+seg('honey',HONEY)+tf('pests','Varroa, SHB, chalkbrood…',1)+tf('treatments','Product, dose…')+'</div>'+
-  '<div class="step" data-step="2" hidden>'+tf('notes','Anything else…',1)+'<div class="lbl">Photos</div><div id="thumbs">'+thumbsHtml(draft.photos,true)+'</div><label class="btn" for="f_photos" style="margin-top:8px;width:100%;color:var(--text)">&#128247; Add photos</label><input id="f_photos" type="file" accept="image/*" capture="environment" multiple hidden><div id="busy" class="busy" hidden>Processing photos…</div></div>'+
-  '<div class="bar"><button type="button" id="prevBtn" data-act="prev">Cancel</button><button type="button" id="saveDraftBtn" class="saveDraft" data-act="saveDraft" aria-label="Save draft">&#128190; Save</button><button type="button" id="nextBtn" class="primary" data-act="next">Next &rsaquo;</button></div></form>';}
-function showStep(){var k=draft.step||0;app.querySelectorAll('.step').forEach(function(el){el.hidden=+el.dataset.step!==k;});
-  app.querySelectorAll('.tabs button').forEach(function(b){b.setAttribute('aria-current',+b.dataset.ix===k);});
-  document.getElementById('prevBtn').innerHTML=k?'&lsaquo; Back':'Cancel';var n=document.getElementById('nextBtn');n.innerHTML=k===2?'&#10003; Save':'Next &rsaquo;';n.dataset.act=k===2?'save':'next';}
-function setStep(k){draft.step=Math.max(0,Math.min(2,k));showStep();}
+  return '<h1>'+esc(h.name)+' &middot; inspection</h1><div class="prog"><span id="progTxt"></span><span class="dots">'+STEPS.map(function(){return '<i></i>';}).join('')+'</span></div><form id="inspForm" class="screen" style="animation:none">'+
+  stp(0,'<label for="f_date">Date</label><input type="date" id="f_date" data-f="date" value="'+esc(draft.date)+'"><div class="lbl">Colony strength</div>'+seg('strength',['weak','medium','strong']),'Say &ldquo;strong&rdquo;, &ldquo;medium&rdquo; or &ldquo;weak&rdquo;.')+
+  stp(1,tf('weather','Sunny, 24°C…')+'<div class="chips">'+WEATHER.slice(0,6).map(function(w){return '<button type="button" data-act="wx" data-v="'+w+'">'+cap(w)+'</button>';}).join('')+'</div>','Say e.g. &ldquo;20 degrees and sunny&rdquo;.')+
+  stp(2,'<div class="lbl">Queen seen?</div>'+seg('queenSeen',['yes','no'],['Yes, seen','Not seen']),'Say &ldquo;queen seen&rdquo; or &ldquo;not seen&rdquo;.')+
+  stp(3,'<div class="lbl">Brood pattern</div>'+seg('brood',BROOD,['Solid','Spotty','Patchy','None']),'Say &ldquo;solid&rdquo;, &ldquo;spotty&rdquo;, &ldquo;patchy&rdquo; or &ldquo;none&rdquo;.')+
+  stp(4,'<div class="lbl">Honey stores</div>'+seg('honey',HONEY),'Say &ldquo;honey low/medium/good/full&rdquo;.')+
+  stp(5,tf('pests','Varroa, SHB, chalkbrood…',1),'Just speak, or say &ldquo;restart&rdquo; to clear.')+
+  stp(6,tf('treatments','Product, dose…'),'Just speak, or say &ldquo;next&rdquo;.')+
+  stp(7,tf('notes','Anything else…',1),'Just speak, or say &ldquo;restart&rdquo; to clear.')+
+  stp(8,'<div class="lbl">Photos</div><div id="thumbs">'+thumbsHtml(draft.photos,true)+'</div><label class="btn" for="f_photos" data-say="add photos|photo|photos|camera" style="margin-top:8px;width:100%;color:var(--text)">&#128247; Add photos</label><input id="f_photos" type="file" accept="image/*" capture="environment" multiple hidden><div id="busy" class="busy" hidden>Processing photos…</div>','Say &ldquo;finish&rdquo; to complete the inspection.')+
+  '<div class="bar"><button type="button" id="prevBtn" data-act="prev">Cancel</button><button type="button" id="saveDraftBtn" class="saveDraft" data-act="saveDraft" data-say="save draft" aria-label="Save draft">&#128190; Save</button><button type="button" id="nextBtn" class="primary" data-act="next">Next &rsaquo;</button></div></form>';}
+function showStep(){var k=Math.max(0,Math.min(LASTSTEP,draft.step||0));draft.step=k;app.querySelectorAll('.step').forEach(function(el){el.hidden=+el.dataset.step!==k;});
+  var pt=document.getElementById('progTxt');if(pt)pt.textContent='Step '+(k+1)+' of '+STEPS.length+' · '+STEPS[k];
+  app.querySelectorAll('.prog .dots i').forEach(function(d,ix){d.className=ix===k?'on':ix<k?'done':'';});
+  document.getElementById('prevBtn').innerHTML=k?'&lsaquo; Back':'Cancel';var n=document.getElementById('nextBtn');n.innerHTML=k===LASTSTEP?'&#10003; Finish':'Next &rsaquo;';n.dataset.act=k===LASTSTEP?'save':'next';n.dataset.say=k===LASTSTEP?'finish|done|save inspection':'next|continue';refitSoon();}
+function setStep(k){draft.step=Math.max(0,Math.min(LASTSTEP,k));showStep();}
 function thumbsHtml(photos,editable){if(!photos.length)return editable?'<div class="meta">No photos yet &ndash; tap below to take or pick some.</div>':empty('photo','No photos','No photos were taken during this inspection.');
   return '<div class="thumbs">'+photos.map(function(p,ix){return '<div class="thumb"><button type="button" style="all:unset;display:block;width:100%;height:100%;cursor:pointer" data-act="view" data-ix="'+ix+'" aria-label="View photo '+(ix+1)+'"><img src="'+p+'" alt="Photo '+(ix+1)+'"></button>'+(editable?'<button type="button" class="x" data-act="rmPhoto" data-ix="'+ix+'" aria-label="Remove photo">&times;</button>':'')+'</div>';}).join('')+'</div>';}
 function curInsp(){var h=hive(route.id);return h&&h.inspections.filter(function(i){return i.id===route.iid;})[0];}
 function vInsp(){var i=curInsp();if(!i){route={name:'hive',id:route.id};return vHive();}
   var rows=[['Weather',i.weather],['Strength',i.strength],['Queen seen',i.queenSeen],['Brood',i.brood],['Honey',i.honey],['Pests',i.pests],['Treatments',i.treatments],['Notes',i.notes]];
-  return '<h1>'+esc(fmtDate(i.date))+'</h1><p class="sub">'+esc(hive(route.id).name)+'</p><div class="panel"><div class="card"><dl class="dl">'+rows.map(function(r){return '<dt>'+r[0]+'</dt><dd>'+(r[1]?esc(r[1]):'—')+'</dd>';}).join('')+'</dl></div><div class="lbl">Photos</div>'+thumbsHtml(i.photos,false)+'</div><div class="bar"><button class="danger" data-act="delInsp">Delete inspection</button></div>';}
+  return '<h1>'+esc(fmtDate(i.date))+'</h1><p class="sub">'+esc(hive(route.id).name)+'</p><div class="panel">'+rows.map(function(r){return '<div class="kv"><b>'+r[0]+'</b><span>'+(r[1]?esc(r[1]):'—')+'</span></div>';}).join('')+'<div class="lbl">Photos</div>'+thumbsHtml(i.photos,false)+'</div><div class="bar"><button class="danger" data-act="delInsp" data-say="delete inspection|delete">Delete inspection</button></div>';}
 
 /* ---------- photos ---------- */
 function resize(file,max,q){return new Promise(function(res,rej){var url=URL.createObjectURL(file),img=new Image();
@@ -290,7 +313,7 @@ function resize(file,max,q){return new Promise(function(res,rej){var url=URL.cre
     var x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height);x.drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);res(c.toDataURL('image/jpeg',q));};
   img.onerror=function(){URL.revokeObjectURL(url);rej(new Error('Could not read image'));};img.src=url;});}
 function overlay(title,body,cls){var v=document.createElement('div');v.className='overlay '+(cls||'');v.setAttribute('role','dialog');v.setAttribute('aria-modal','true');
-  v.innerHTML='<div class="ohead"><div class="title" style="flex:1">'+title+'</div>'+undoHtml()+'<button class="primary" data-close>Close &times;</button></div>'+body;
+  v.innerHTML='<div class="ohead"><div class="title" style="flex:1">'+title+'</div>'+undoHtml()+'<button class="primary" data-close data-say="close|done|exit|close help">Close &times;</button></div>'+body;
   v.addEventListener('click',function(e){if(e.target.closest('[data-close]'))v.remove();});document.body.appendChild(v);undoUI();return v;}
 function viewer(src){var v=overlay('Photo','<img alt="Photo full size">','viewer');v.querySelector('img').src=src;v.querySelector('img').onclick=function(){v.remove();};}
 
@@ -300,7 +323,7 @@ function openHelp(){var v=overlay('Help &amp; backup','<div class="obody">'+
 '<div class="instOnly"><h3>Install app</h3><button type="button" id="hInstall" class="primary instBtn">&#11015; Install Hive Notes</button><p class="meta" id="hInstallMsg"></p></div>'+'<div class="bar" style="padding-top:0;margin-bottom:6px"><button type="button" id="hMic">&#127908; Microphone help</button></div>'+'<h3>Settings</h3><button id="hfSetting" type="button" aria-pressed="'+hfOn+'" style="width:100%">Hands-free mode: '+(hfOn?'On':'Off')+'</button><p class="meta">Hands-free keeps listening so you can speak commands or dictate into the box you tapped, without touching the mic. Uses more battery. Say &ldquo;stop listening&rdquo; or tap the mic to go back to push-to-talk.</p>'+'<h3>1. Open the app on your phone</h3><ol><li>Save the <b>hive-notes.html</b> file to your phone (e.g. from email, Google Drive or iCloud).</li><li>Open it in <b>Chrome</b> (Android) or <b>Safari</b> (iPhone). Tip: open the Files app, tap the file, and choose Chrome/Safari.</li></ol>'+
 '<h3>2. Add it to your home screen</h3><ul><li><b>Android:</b> in Chrome tap the menu <b>&#8942;</b> (top right) &gt; <b>Add to Home screen</b>.</li><li><b>iPhone:</b> in Safari tap <b>Share</b> (square with arrow) &gt; <b>Add to Home Screen</b>.</li></ul>'+
 '<h3>3. Use it anywhere</h3><ul><li>Tap the new icon on your home screen. The app works <b>offline</b> in the apiary &ndash; no signal needed.</li></ul>'+
-'<h3>What you can say &#128483;</h3><div class="card" style="margin:0 0 12px"><ul style="margin:0"><li><b>Move:</b> &ldquo;next&rdquo;, &ldquo;back&rdquo;, &ldquo;save&rdquo; / &ldquo;done&rdquo;, &ldquo;cancel&rdquo;, &ldquo;go home&rdquo; (keeps your draft)</li><li><b>Fill a box:</b> &ldquo;weather sunny and calm&rdquo;, &ldquo;pests a few varroa mites&rdquo;, &ldquo;treatments oxalic acid&rdquo;, &ldquo;notes added a super&rdquo;</li><li><b>Queen:</b> &ldquo;queen seen&rdquo; / &ldquo;queen not seen&rdquo;</li><li><b>Strength:</b> &ldquo;strength strong&rdquo; (or just &ldquo;strong&rdquo;, &ldquo;medium&rdquo;, &ldquo;weak&rdquo;)</li><li><b>Brood:</b> &ldquo;brood solid&rdquo;, &ldquo;brood spotty&rdquo;, &ldquo;brood patchy&rdquo;, &ldquo;no brood&rdquo;</li><li><b>Honey stores:</b> &ldquo;honey good&rdquo;, &ldquo;honey low&rdquo;, &ldquo;honey full&rdquo;</li><li><b>Photos:</b> &ldquo;photo&rdquo;</li><li><b>Fix mistakes:</b> &ldquo;restart&rdquo; (clears the box you&rsquo;re in), &ldquo;undo&rdquo;; &ldquo;stop&rdquo; turns hands-free off</li><li><b>Elsewhere:</b> &ldquo;open Oscar&rdquo;, &ldquo;add inspection&rdquo;, &ldquo;add hive&rdquo;, &ldquo;help&rdquo;</li></ul><p class="meta" style="margin:8px 0 0">Commands work even while a text box is selected; anything else you say is typed into that box. The status line shows <i>Heard: &hellip; &rarr; what it did</i>. Beekeeping words (varroa, brood, queen cells, super, small hive beetle&hellip;) are auto-corrected.</p></div>'+
+'<h3>What you can say &#128483;</h3><div class="card" style="margin:0 0 12px"><ul style="margin:0"><li><b>Move:</b> &ldquo;next&rdquo;, &ldquo;back&rdquo;, &ldquo;save&rdquo; (keeps the draft), &ldquo;finish&rdquo; / &ldquo;done&rdquo; (completes it), &ldquo;cancel&rdquo;, &ldquo;go home&rdquo; (keeps your draft)</li><li><b>Fill a box:</b> &ldquo;weather sunny and calm&rdquo;, &ldquo;pests a few varroa mites&rdquo;, &ldquo;treatments oxalic acid&rdquo;, &ldquo;notes added a super&rdquo;</li><li><b>Queen:</b> &ldquo;queen seen&rdquo; / &ldquo;queen not seen&rdquo;</li><li><b>Strength:</b> &ldquo;strength strong&rdquo; (or just &ldquo;strong&rdquo;, &ldquo;medium&rdquo;, &ldquo;weak&rdquo;)</li><li><b>Brood:</b> &ldquo;brood solid&rdquo;, &ldquo;brood spotty&rdquo;, &ldquo;brood patchy&rdquo;, &ldquo;no brood&rdquo;</li><li><b>Honey stores:</b> &ldquo;honey good&rdquo;, &ldquo;honey low&rdquo;, &ldquo;honey full&rdquo;</li><li><b>Temperature:</b> &ldquo;twenty degrees&rdquo;, &ldquo;it&rsquo;s 18 degrees and sunny&rdquo; &rarr; Weather gets 20&deg;C / 18&deg;C</li><li><b>Any button:</b> say its label, e.g. &ldquo;save to PDF&rdquo;, &ldquo;resume&rdquo;, &ldquo;delete hive&rdquo; (asks &ldquo;yes&rdquo; / &ldquo;no&rdquo;), &ldquo;not seen&rdquo;, &ldquo;patchy&rdquo;, &ldquo;close&rdquo;</li><li><b>Numbers:</b> in hands-free mode buttons show small numbers &ndash; say &ldquo;press 3&rdquo; (or &ldquo;show numbers&rdquo; / &ldquo;hide numbers&rdquo;)</li><li><b>Pages:</b> &ldquo;next page&rdquo;, &ldquo;previous page&rdquo;, &ldquo;scroll down&rdquo; / &ldquo;scroll up&rdquo;</li><li><b>Photos:</b> &ldquo;photo&rdquo; (the phone may still need a tap to open the camera)</li><li><b>Fix mistakes:</b> &ldquo;restart&rdquo; (clears the box you&rsquo;re in), &ldquo;undo&rdquo; / &ldquo;undo that&rdquo; (same as the &#8630; button, never changes page); &ldquo;stop&rdquo; turns hands-free off</li><li><b>Elsewhere:</b> &ldquo;open Oscar&rdquo;, &ldquo;add inspection&rdquo;, &ldquo;add hive&rdquo;, &ldquo;help&rdquo;</li></ul><p class="meta" style="margin:8px 0 0">Commands work even while a text box is selected; anything else you say is typed into that box. The status line shows <i>Heard: &hellip; &rarr; what it did</i>. Beekeeping words (varroa, brood, queen cells, super, small hive beetle&hellip;) are auto-corrected.</p></div>'+
 '<h3>Voice input &#127908;</h3><ul><li>Tap the mic next to any box to <b>dictate</b> into it.</li><li>Tap the mic in the top bar for <b>commands</b>: &ldquo;open hive 2&rdquo;, &ldquo;add hive&rdquo;, &ldquo;add inspection&rdquo;; in the form: &ldquo;strong&rdquo;, &ldquo;queen seen&rdquo; / &ldquo;no queen&rdquo;, &ldquo;sunny&rdquo;, &ldquo;brood solid&rdquo;, &ldquo;honey full&rdquo;, &ldquo;next&rdquo;, &ldquo;back&rdquo;, &ldquo;save&rdquo;, &ldquo;cancel&rdquo;, or a field name like &ldquo;notes queen cells on frame 3&rdquo;.</li><li>Voice recognition is provided by your browser. In <b>Chrome it usually needs internet</b>; without signal, just type &ndash; everything else still works offline. Allow microphone access when asked. Voice only works when the app is opened from a web link (https), not as a downloaded file &ndash; otherwise use your keyboard&rsquo;s mic key.</li></ul>'+
 '<h3>Troubleshooting</h3><ul><li><b>File won&rsquo;t open / shows code:</b> it opened in a text or file viewer. Open it with Chrome or Safari instead (Files app &gt; tap file &gt; Open with / Share &gt; Safari).</li>'+
 '<li><b>My data seems missing:</b> data is saved only on <b>this phone, in this browser</b>. A different browser, a different copy of the file, private mode, or clearing site/browser data shows an empty app. Go back to the browser you used before, or import a backup.</li>'+
@@ -452,12 +475,23 @@ var FIXES=[
  [/^\s*(pets|pest)\b/i,'pests'],
  [/\b(honey stalls|honey stores?|honey store's)\b/gi,'honey stores']
 ];
-function fixVocab(t){t=String(t||'');FIXES.forEach(function(f){t=t.replace(f[0],f[1]);});return t;}
+var NW={zero:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19},TW={twenty:20,thirty:30,forty:40,fourty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90};
+function fixTemp(t){
+  t=t.replace(/\b(minus |negative )?(twenty|thirty|forty|fourty|fifty|sixty|seventy|eighty|ninety)(?:[\s-]+(one|two|three|four|five|six|seven|eight|nine))?(\s*(?:degrees?|degree|°))/gi,function(m,neg,tn,on,rest){return (neg?'-':'')+(TW[tn.toLowerCase()]+(on?NW[on.toLowerCase()]:0))+rest;});
+  t=t.replace(/\b(minus |negative )?(zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen)(\s*(?:degrees?|°))/gi,function(m,neg,n,rest){return (neg?'-':'')+NW[n.toLowerCase()]+rest;});
+  t=t.replace(/\b(minus |negative )(\d+)(\s*(?:degrees?|°))/gi,'-$2$3');
+  t=t.replace(/(-?\d+(?:[.,]\d+)?)\s*(?:degrees?|degree|°)\s*(fahrenheit|f\b)/gi,'$1°F');
+  t=t.replace(/(-?\d+(?:[.,]\d+)?)\s*(?:degrees?|degree|°)(\s*(?:celsius|centigrade|c\b|see\b|sea\b))?/gi,'$1°C');
+  t=t.replace(/(-?\d+)\s*(celsius|centigrade)\b/gi,'$1°C');
+  return t;}
+function fixVocab(t){t=String(t||'');FIXES.forEach(function(f){t=t.replace(f[0],f[1]);});t=fixTemp(t);if(/^\s*(and do|undue|on do|in do|undo it|undo that|undo last|undo please)\s*$/i.test(t))t='undo';return t;}
+var TEMP_RE=/-?\d+(?:[.,]\d+)?°[CF]/;
+function isTempPhrase(t){if(!TEMP_RE.test(t))return false;var rest=norm(t.replace(/-?\d+(?:[.,]\d+)?°[CF]/g,' ')).split(' ').filter(Boolean);return rest.every(function(x){return /^(it|its|it s|s|is|was|about|around|roughly|and|a|bit|today|outside|weather|temperature|temp|now|the|very|quite|but|with|degrees?)$/.test(x)||WEATHER.indexOf(x)>=0;});}
 var VOCAB=['varroa','brood','queen','cells','super','hive','tool','capped','beetle','nectar','foundation','swarm','drone','larvae','eggs','honey','stores','strength','strong','weak','medium','solid','spotty','patchy','weather','pests','notes','treatments','next','back','save','done','home','photo','sunny','cloudy','windy','calm','rainy','mites','seen','frames','comb'];
-function vocabScore(t){var w=norm(t).split(' '),s=0;w.forEach(function(x){if(VOCAB.indexOf(x)>=0)s+=1;});if(isCmd(norm(t)))s+=3;return s;}
+function vocabScore(t){var w=norm(t).split(' '),s=0;w.forEach(function(x){if(VOCAB.indexOf(x)>=0)s+=1;});if(isCmd(norm(t)))s+=3;if(TEMP_RE.test(t))s+=10;return s;}
 function pickAlt(res){var best=null,bs=-1;for(var i=0;i<res.length;i++){var raw=res[i].transcript,f=fixVocab(raw),sc=vocabScore(f)-i*0.5+(f!==raw?0.2:0);if(sc>bs){bs=sc;best=f;}}return best==null?'':best;}
 var FIELDKW=/^(weather|pests?|disease|mites|varroa|treatments?|treated|notes?|comment|date)\b/;
-function isCmd(n){if(!n)return false;
+function isCmd(n,raw){if(!n)return false;if(raw&&isTempPhrase(raw))return true;if(/^(undo|scroll (up|down)|page (up|down)|(next|previous|prev) page|show numbers|hide numbers|(press|number|button|tap) \d+)$/.test(n))return true;
   if(/^(next|continue|back|previous|go back|save|done|finish|cancel|stop|go home|home|open home|photo|photos|take a? ?photo|add photos?|picture|camera|help|undo|undo last)( inspection| please)?$/.test(n))return true;
   if(FIELDKW.test(n))return true;
   if(/^queen\b/.test(n)&&!/^queen cells?\b/.test(n))return true;
@@ -483,7 +517,7 @@ function bestMatch(phrase,items,key,min){var p=norm(phrase),best=null,bs=0;items
 function wordHit(words,opt,min){var ow=opt.split(' ');return words.some(function(w,ix){var cand=words.slice(ix,ix+ow.length).join(' ');return sim(cand,opt)>=(min||0.8);});}
 function command(text){text=fixVocab(text);var t=norm(text),w=t.split(' ');
   function has(re){return re.test(t);}
-  if(has(/\b(help|install)\b/)){openHelp();return 'Help';}
+  if(has(/^(open )?help$|\binstall\b/)){openHelp();return 'Help';}
   if(route.name==='home'||route.name==='hive'||route.name==='insp'){
     if(has(/\badd\b.*\bhive\b|\bnew hive\b/)&&!has(/inspection/)){go({name:'addHive'});return 'Add hive';}
     if(has(/inspect/)&&has(/\b(add|new|start)\b/)){var target=route.name==='home'?null:hive(route.id);
@@ -494,7 +528,7 @@ function command(text){text=fixVocab(text);var t=norm(text),w=t.split(' ');
     if(route.name==='hive'&&has(/^(open )?(last|latest)/)){var h0=hive(route.id),li=h0.inspections.slice().sort(cmp)[0];if(li){go({name:'insp',id:h0.id,iid:li.id});return 'Latest inspection';}}
     var q=t.replace(/^(open|show|go to|select)\s+/,''),m=bestMatch(q,state.hives,function(h){return h.name;});
     if(m){go({name:'hive',id:m.id});return 'Opened '+m.name;}
-    return toast('Didn’t catch a hive or command in “'+text+'”. Try “open hive 1” or “add hive”.',true);}
+    return null;}
   if(route.name==='addHive'){if(has(/^(save|done)$/)){app.querySelector('#hiveForm').requestSubmit();return 'Save';}if(has(/^cancel$/)){go({name:'home'});return 'Cancel';}
     var hn=document.getElementById('hName');if(!hn.value){hn.value=text.replace(/^(name|call it)\s+/i,'');return 'Name set';}var hno=document.getElementById('hNotes');hno.value=(hno.value?hno.value+' ':'')+text;return 'Added to notes';}
   if(route.name==='form'){var did=[];
@@ -502,15 +536,17 @@ function command(text){text=fixVocab(text);var t=norm(text),w=t.split(' ');
     if(has(/^undo( last)?$/)){undoLast();return 'Undo last';}
     var fields={weather:['weather'],pests:['pests','pest','disease','mites','varroa'],treatments:['treatment','treatments','treated'],notes:['notes','note','comment'],date:['date']};
     for(var f in fields){var kw=fields[f].filter(function(k){return w[0]===k||sim(w[0],k)>=0.8;})[0];if(kw&&!(f==='weather'&&w.length>1&&WEATHER.some(function(x){return t.indexOf(x)>=0;})&&false)){
-      var keepAll=/^(varroa|mites|disease)$/.test(kw);var restT=keepAll?text.trim():text.trim().split(/\s+/).slice(1).join(' ').replace(/^(is|are|was|were|:)\s+/i,'');var step=f==='weather'||f==='date'?0:f==='notes'?2:1;setStep(step);var el=document.getElementById('f_'+f);el.focus();
+      var keepAll=/^(varroa|mites|disease)$/.test(kw);var restT=keepAll?text.trim():text.trim().split(/\s+/).slice(1).join(' ').replace(/^(is|are|was|were|:)\s+/i,'');setStep(FSTEP[f]);var el=document.getElementById('f_'+f);el.focus();
       if(f==='date')return 'Date field';
       if(restT){el.value=(el.value?el.value.replace(/\s*$/,' '):'')+restT;el.dispatchEvent(new Event('input',{bubbles:true}));return TEXTF[f]+': “'+restT+'”';}
       setTimeout(function(){dictateInto(el);},300);return TEXTF[f]+': speak now';}}
-    if(has(/^(save|done|finish)( inspection)?$/)){submitInsp();return 'Save';}
+    if(has(/^(done|finish|save inspection|finish inspection)$/)){submitInsp();return 'Finished – inspection saved';}
+    if(has(/^save( draft)?$/)){saveDraftNow();return 'Saved draft ✓';}
     if(has(/^cancel$/)){cancelForm();return 'Cancel';}
     if(has(/^(next|continue)( please)?$/)){setStep((draft.step||0)+1);return 'Next → step '+((draft.step||0)+1)+' '+STEPS[draft.step||0];}
     if(has(/^(back|previous|go back)$/)){setStep((draft.step||0)-1);return 'Back → step '+((draft.step||0)+1)+' '+STEPS[draft.step||0];}
-    if(has(/\b(photo|picture|camera)\b/)){setStep(2);document.getElementById('f_photos').click();return 'Photos';}
+    if(has(/\b(photo|picture|camera)\b/)){setStep(FSTEP.photos);document.getElementById('f_photos').click();return 'Photos';}
+    var tm=text.match(new RegExp(TEMP_RE.source,'g'));if(tm){tm.forEach(function(x){addWeather(x.toUpperCase().replace('°C','°C'));});did.push('Weather: '+tm.join(', '));t=norm(text.replace(/-?\d+(?:[.,]\d+)?°[CF]/g,' '));w=t.split(' ');}
     var honeyCtx=has(/\b(honey|stores|store|stored|food|nectar)\b/),broodCtx=has(/\bbrood\b/);var qcells=has(/\bqueen cells?\b/);
     if(has(/\bqueen\b/)&&!qcells){if(has(/\b(no|not|didn t|didnt|missing|none|without|never)\b/)){setSeg('queenSeen','no');did.push('Queen: Not seen');}else{setSeg('queenSeen','yes');did.push('Queen: Yes, seen');}}
     if(broodCtx){var bo=BROOD.filter(function(o){return wordHit(w,o.split(' ')[0]);})[0];if(bo){setSeg('brood',bo);did.push('Brood: '+cap(bo));}}
@@ -518,17 +554,20 @@ function command(text){text=fixVocab(text);var t=norm(text),w=t.split(' ');
     if(!honeyCtx){var so=['weak','medium','strong'].filter(function(o){return wordHit(w,o);})[0];if(so){setSeg('strength',so);did.push('Strength: '+cap(so));}}
     if(!broodCtx){var bo2=['solid','spotty','patchy'].filter(function(o){return wordHit(w,o,0.85);})[0];if(bo2){setSeg('brood',bo2);did.push('Brood: '+cap(bo2));}}
     var wx=WEATHER.filter(function(o){return wordHit(w,o,0.85);});wx.forEach(addWeather);if(wx.length)did.push('Weather + '+wx.join(', '));
-    if(did.length){showStepSoon();return did.join(', ');}
-    return toast('Didn’t match an option in “'+text+'”. Try “strong”, “queen seen”, “sunny”, “next” or “notes …”.',true);}
+    if(did.length){var lk=did[did.length-1];var mp={Queen:'queenSeen',Brood:'brood',Honey:'honey',Strength:'strength',Weather:'weather'};var fk=mp[lk.split(/[: +]/)[0]];if(fk)setStep(FSTEP[fk]);return did.join(', ');}
+    return null;}
 }
 function showStepSoon(){}
 function setSeg(f,v){if(draft&&draft[f]!==v)draftU(f,draft[f],cap(f.replace(/([A-Z])/g,' $1').toLowerCase())+' '+(v?'→ '+v:'cleared'));draft[f]=v;app.querySelectorAll('[data-act=seg][data-f="'+f+'"]').forEach(function(x){x.setAttribute('aria-pressed',x.dataset.v===v);});}
 function addWeather(word){var el=document.getElementById('f_weather'),v=draft.weather||'';if(new RegExp('\\b'+word+'\\b','i').test(v))return;commitF('weather');draftU('weather',draft.weather||'','Weather + '+word);draft.weather=v?v.replace(/[\s,]*$/,'')+', '+word:cap(word);if(el)el.value=draft.weather;}
 
 /* ---------- actions ---------- */
-function newInsp(){var ex=readDraft();if(ex&&hive(ex.hive)){if(ex.hive===route.id)return resumeDraft(ex.hive);if(!confirm('You have an unfinished inspection for “'+hive(ex.hive).name+'”. Discard it and start a new one here?'))return;clearDraft();}draft={step:0,date:today(),weather:'',strength:'',queenSeen:'',brood:'',honey:'',pests:'',treatments:'',notes:'',photos:[]};go({name:'form',id:route.id});}
+function newInsp(){var ex=readDraft();if(ex&&hive(ex.hive)){if(ex.hive===route.id)return resumeDraft(ex.hive);var here=route.id;return askConfirm('You have an unfinished inspection for “'+hive(ex.hive).name+'”. Discard it and start a new one here?','Yes, discard it',function(){clearDraft();route={name:'hive',id:here};newInsp();});}draft={step:0,date:today(),weather:'',strength:'',queenSeen:'',brood:'',honey:'',pests:'',treatments:'',notes:'',photos:[]};go({name:'form',id:route.id});}
 function hasData(d){return !!(d&&((d.photos&&d.photos.length)||d.notes||d.weather||d.strength||d.queenSeen||d.brood||d.honey||d.pests||d.treatments));}
-function confirmDiscard(){return !hasData(draft)||confirm('Discard this inspection? Everything entered will be lost.');}
+function askConfirm(msg,yesLabel,onYes){var o=document.querySelector('.confirmOv');if(o)o.remove();o=document.createElement('div');o.className='pdfOv confirmOv';o.setAttribute('role','alertdialog');
+  o.innerHTML='<div class="card"><div class="title" style="white-space:normal">'+esc(msg)+'</div><p class="meta" style="margin:6px 0 0">Say &ldquo;yes&rdquo; or &ldquo;no&rdquo;.</p><div class="bar"><button type="button" data-c="0" data-say="no|nope|keep|keep it|cancel|go back">No</button><button type="button" class="danger" data-c="1" data-say="yes|yeah|yep|yes please|confirm|ok">'+esc(yesLabel)+'</button></div></div>';
+  o.onclick=function(e){var b=e.target.closest('[data-c]');if(!b)return;o.remove();refitSoon();if(b.dataset.c==='1')onYes();else toast('Kept – nothing deleted');};document.body.appendChild(o);refitSoon();return o;}
+function confirmDiscard(){return !hasData(draft);}
 
 /* ---------- Save to PDF (print view) ---------- */
 function pdfHtml(hs,title){var d=new Date();
@@ -540,7 +579,7 @@ function pdfHtml(hs,title){var d=new Date();
   return s;}
 function exportPdf(hs,title){var pv=document.getElementById('printView');if(!pv){pv=document.createElement('div');pv.id='printView';document.body.appendChild(pv);}
   pv.innerHTML=pdfHtml(hs,title);var o=document.querySelector('.pdfOv');if(o)o.remove();o=document.createElement('div');o.className='pdfOv';o.setAttribute('role','dialog');
-  o.innerHTML='<div class="card"><div class="title">&#128196; Save to PDF</div><ol><li>Tap <b>Print / Save PDF</b> below.</li><li><b>Android Chrome:</b> set the printer at the top to <b>Save as PDF</b>, then tap the PDF button.</li><li><b>iPhone Safari:</b> tap <b>Share</b> (or pinch out on the preview), then <b>Save to Files</b>.</li></ol><div class="bar"><button type="button" data-x="0">Cancel</button><button type="button" class="primary" data-x="1">Print / Save PDF</button></div></div>';
+  o.innerHTML='<div class="card"><div class="title">&#128196; Save to PDF</div><ol><li>Tap <b>Print / Save PDF</b> below.</li><li><b>Android Chrome:</b> set the printer at the top to <b>Save as PDF</b>, then tap the PDF button.</li><li><b>iPhone Safari:</b> tap <b>Share</b> (or pinch out on the preview), then <b>Save to Files</b>.</li></ol><div class="bar"><button type="button" data-x="0" data-say="cancel|close|no">Cancel</button><button type="button" class="primary" data-x="1" data-say="print|save pdf|save as pdf|print save pdf|yes">Print / Save PDF</button></div></div>';
   o.onclick=function(e){var b=e.target.closest('[data-x]');if(e.target===o||b){o.remove();if(b&&b.dataset.x==='1'){try{window.print();}catch(err){toast('Printing is not available in this browser',true);}}}};
   document.body.appendChild(o);}
 var DKEY='hiveNotes.draft';
@@ -552,7 +591,7 @@ function draftFor(id){var o=readDraft();return o&&o.hive===id?o:null;}
 function resumeDraft(id){var o=draftFor(id);if(!o){toast('No saved draft for this hive',true);return;}draft=Object.assign({step:0,photos:[]},o.d);if(!Array.isArray(draft.photos))draft.photos=[];go({name:'form',id:id});}
 function leaveForm(target,noHist){var id=route.id;if(hasData(draft)){storeDraft();toast('Draft saved — tap Resume inspection to continue');}else clearDraft();draft=null;dropDraftU();go(target||{name:'hive',id:id},noHist);}
 function restoreDraft(){try{var o=JSON.parse(localStorage.getItem(DKEY));if(o&&o.d&&hive(o.hive)){draft=Object.assign({step:0,photos:[]},o.d);if(!Array.isArray(draft.photos))draft.photos=[];route={name:'form',id:o.hive};return true;}if(o)clearDraft();}catch(e){clearDraft();}return false;}
-function cancelForm(){if(confirmDiscard()){clearDraft();draft=null;dropDraftU();go({name:'hive',id:route.id});}}
+function cancelForm(){var id=route.id,done=function(){clearDraft();draft=null;dropDraftU();go({name:'hive',id:id});};if(confirmDiscard())return done();askConfirm('Discard this inspection? Everything entered will be lost.','Yes, discard',function(){done();toast('Inspection discarded');});}
 function submitInsp(){var hv=hive(route.id),ins=Object.assign({id:uid(),created:Date.now()},draft);delete ins.step;ins.date=ins.date||today();var bI=capH([hv.id]);hv.inspections.push(ins);
   if(save()){clearDraft();draft=null;dropDraftU();pushH('Save inspection',bI);toast('Inspection saved');go({name:'hive',id:route.id});}}
 backBtn.onclick=function(){stopListen();if(route.name==='form')return leaveForm();
@@ -586,7 +625,7 @@ function hfShow(title,heard,raw){hfStatus.classList.toggle('on',hfOn);hfStatus.q
 var lastHeard='';function heardMsg(t,did){return 'Heard: “'+t.trim()+'” → '+did;}
 function hfUI(){hfBtn.setAttribute('aria-pressed',hfOn);hfBtn.innerHTML='Hands-free<br>'+(hfOn?'On':'Off');micBtn.classList.toggle('hf',hfOn);micBtn.setAttribute('aria-label',hfOn?'Hands-free on - tap to switch to push-to-talk':'Voice: tap and speak');
   var o=document.getElementById('hfSetting');if(o){o.setAttribute('aria-pressed',hfOn);o.textContent='Hands-free mode: '+(hfOn?'On':'Off');}
-  hfShow(hfOn?'Hands-free listening':'Tap to speak','');}
+  hfShow(hfOn?'Hands-free listening':'Tap to speak','');try{refitSoon();}catch(e){}}
 function setHF(on,quiet){on=!!on;if(on){if(!SR){voiceProblem('Voice input isn’t available in this browser.',GBOARD);on=false;}else if(insecure()){on=false;hfOn=false;hfUI();micBlocked(isFileProto()?'file':'insecure');return;}}
   hfOn=on;try{localStorage.setItem(HFKEY,on?'1':'0');}catch(e){}hfUI();clearTimeout(hfTimer);
   if(on){stopListen();hfErrors=0;hfStart();checkPermDenied(function(){if(hfOn)micBlocked('denied');});if(!quiet)toast('Hands-free on: just speak. Tap the mic to go back to push-to-talk.');}else{hfStop();if(!quiet)toast('Push-to-talk: tap the mic to speak.');}}
@@ -594,12 +633,64 @@ function hfStop(){clearTimeout(hfTimer);if(hfRec){var r=hfRec;hfRec=null;try{r.a
 function hfSchedule(){clearTimeout(hfTimer);if(!hfOn||document.hidden)return;var d=Math.min(8000,300*Math.pow(2,hfErrors));hfTimer=setTimeout(hfStart,d);}
 function hfField(){var a=document.activeElement;return a&&app.contains(a)&&(a.tagName==='TEXTAREA'||(a.tagName==='INPUT'&&(!a.type||a.type==='text')))?a:null;}
 function hfHandle(t){t=fixVocab(t);var el=hfField(),n=norm(t);lastHeard=t;
-  if(el&&RESTART_RE.test(n)){clearField(el);hfShow('Hands-free listening',heardMsg(t,'Cleared box – speak again'),true);return;}
-  if(/^(stop|stop listening|push to talk|hands free off)$/.test(n)){setHF(false);return;}
-  if(/^undo( last)?$/.test(n)){undoLast();hfShow('Hands-free listening',heardMsg(t,'Undo last'),true);return;}
-  if(el&&!isCmd(n)){var v=el.value;el.value=(v&&!/\s$/.test(v)?v+' ':v)+t.trim();el.dispatchEvent(new Event('input',{bubbles:true}));var lb=(el.dataset.f&&TEXTF[el.dataset.f])||'box';hfShow('Hands-free listening',heardMsg(t,'added to '+lb),true);return;}
-  if(el&&el.dataset.f)commitF(el.dataset.f);
-  var r=command(t);hfShow('Hands-free listening',heardMsg(t,r?r:'no match – try again'),true);}
+  if(el&&!document.querySelector('.confirmOv,.pdfOv,.overlay')){
+    if(RESTART_RE.test(n)){clearField(el);hfShow('Hands-free listening',heardMsg(t,'Cleared box – speak again'),true);return;}
+    var bx=n.split(' ').length<=3?matchButton(n,0.9):null;
+    if(!isCmd(n,t)&&!bx&&!/^(stop|stop listening|push to talk|hands free off)$/.test(n)){var v=el.value;el.value=(v&&!/\s$/.test(v)?v+' ':v)+t.trim();el.dispatchEvent(new Event('input',{bubbles:true}));var lb=(el.dataset.f&&TEXTF[el.dataset.f])||'box';hfShow('Hands-free listening',heardMsg(t,'added to '+lb),true);return;}
+    if(el.dataset.f)commitF(el.dataset.f);}
+  var r=voiceAct(t);hfShow('Hands-free listening',heardMsg(t,r?r:'no match – try a button name, or say “help”'),true);}
+/* ---------- generic voice buttons + paging ---------- */
+var showNums=null;
+function btnLabel(b){var l=(b.getAttribute('aria-label')||'');var tx=(b.textContent||'').trim();return norm(tx||l);}
+function btnSays(b){var a=[btnLabel(b)];var al=b.getAttribute('aria-label');if(al)a.push(norm(al));if(b.dataset.say)b.dataset.say.split('|').forEach(function(x){a.push(norm(x));});return a.filter(Boolean);}
+function topLayer(){var c=document.querySelector('.confirmOv');if(c)return c;var ps=document.querySelectorAll('.pdfOv');if(ps.length)return ps[ps.length-1];var os=document.querySelectorAll('.overlay');return os.length?os[os.length-1]:null;}
+function hitOk(b){var r=b.getBoundingClientRect();if(r.width<4||r.height<4)return false;var x=r.left+r.width/2,y=r.top+Math.min(r.height/2,r.height-3);if(y<0||y>innerHeight||x<0||x>innerWidth)return false;var e=document.elementFromPoint(x,y);return !!e&&(e===b||b.contains(e)||(b.tagName==='LABEL'&&e===b));}
+function voiceButtons(){var L=topLayer(),root=L||document;var list=[].slice.call(root.querySelectorAll('button,label.btn')).filter(function(b){return b.id!=='micBtn'&&b.id!=='hfBtn'&&!b.disabled&&b.getAttribute('aria-disabled')!=='true'&&hitOk(b);});
+  if(L&&!L.classList.contains('confirmOv')&&L.classList.contains('overlay')){}return list;}
+function matchButton(n,min){if(!n)return null;var best=null,bs=0;voiceButtons().forEach(function(b){btnSays(b).forEach(function(k){var dn=(n.match(/\d+/g)||[]).join(','),dk=(k.match(/\d+/g)||[]).join(',');if(dn&&dk!==dn)return;var sc=k===n?1:sim(n,k);if(sc>bs){bs=sc;best=b;}});});return bs>=(min||0.8)?best:null;}
+function pressBtn(b){var lab=(b.dataset.say&&b.classList.contains('tap')?b.dataset.say.split('|')[0]:(b.textContent||b.getAttribute('aria-label')||'')).replace(/[^\p{L}\p{N}\s,'’.\/-]/gu,' ').replace(/\s+/g,' ').trim()||'button';b.click();return 'Pressed “'+lab+'”';}
+function curPg(){var L=topLayer();var root=L||app;var cs=[].slice.call(root.querySelectorAll('.pg')).filter(function(c){return !c.hidden&&c.offsetParent!==null;});return cs[0]||null;}
+function pgMove(d){var c=curPg();if(!c||!c._pages||c._pages.length<2)return d>0?'Nothing more to show':'Already at the top';var ni=Math.max(0,Math.min(c._pages.length-1,(c._pi||0)+d));if(ni===c._pi)return d>0?'Last page':'First page';c._pi=ni;pgApply(c);return 'Page '+(ni+1)+' of '+c._pages.length;}
+var REVERSED_FORM=/^(next|continue|back|previous|go back|done|finish|finish inspection|save inspection|cancel)( please)?$/;
+function voiceAct(t){t=fixVocab(t);var n=norm(t);if(!n)return null;
+  var cf=document.querySelector('.confirmOv');
+  if(cf){var yb=/^(yes|yeah|yep|yup|ok|okay|confirm|sure|do it|yes please|yes delete|yes discard)\b/.test(n),nb=/^(no|nope|keep|cancel|don t|dont|stop|go back)\b/.test(n);
+    if(yb){cf.querySelector('[data-c="1"]').click();return 'Yes – confirmed';}if(nb){cf.querySelector('[data-c="0"]').click();return 'No – kept';}return 'Say “yes” or “no”';}
+  if(n==='undo'){var top=ustack[ustack.length-1];undoLast();return top&&!(route.name==='form'&&top.t!=='draft')?'Undo: '+top.label:'Nothing to undo';}
+  if(/^(stop|stop listening|push to talk|hands free off)$/.test(n)){setHF(false);return 'Hands-free off';}
+  if(/^(hands free|hands free on)$/.test(n)){setHF(true);return 'Hands-free on';}
+  if(/^(scroll down|page down|next page|more|show more|go down)$/.test(n))return pgMove(1);
+  if(/^(scroll up|page up|previous page|prev page|go up)$/.test(n))return pgMove(-1);
+  if(/^(show|hide) (numbers|button numbers)$/.test(n)){showNums=/^show/.test(n);refitSoon();return showNums?'Numbers shown':'Numbers hidden';}
+  var nm=n.match(/^(?:press|number|button|tap|push) (\d+)$/)||((showNums||hfOn)&&n.match(/^(\d+)$/));
+  if(nm){var bl=voiceButtons().filter(function(b){return b.dataset.n===nm[1];})[0];return bl?pressBtn(bl):'No button number '+nm[1];}
+  var rs=n.match(/^(?:restart|clear) (weather|pests|treatments|notes)$/);if(rs&&route.name==='form'){setStep(FSTEP[rs[1]]);restartField(document.getElementById('f_'+rs[1]));return 'Cleared '+TEXTF[rs[1]];}
+  var L=topLayer();
+  if(L){if(/^(close|exit|done|close help|go back|back)$/.test(n)){var cb=L.querySelector('[data-close],[data-x="0"]');if(cb){cb.click();refitSoon();return 'Closed';}L.remove();return 'Closed';}
+    var ob=matchButton(n,0.72);if(ob)return pressBtn(ob);if(/^(open )?help$/.test(n))return 'Help is open';return null;}
+  var formRes=route.name==='form'&&REVERSED_FORM.test(n);
+  if(!formRes){var eb=matchButton(n,0.88);if(eb)return pressBtn(eb);}
+  var r=command(t);if(r)return r;
+  var fb=matchButton(n,0.7);if(fb)return pressBtn(fb);
+  return null;}
+function pgCollect(c,el,base,H,out){[].slice.call(el.children).forEach(function(ch){if(ch.hidden||ch.classList.contains('pager'))return;var cs=getComputedStyle(ch);if(cs.display==='none')return;var rr=ch.getBoundingClientRect();if(!rr.height)return;var top=rr.top-base,bot=rr.bottom-base;
+  if(bot-top>H&&ch.children.length&&!/^(svg|img|textarea|input)$/i.test(ch.tagName))pgCollect(c,ch,base,H,out);else out.push({t:top,b:bot,h:/^H[1-4]$/.test(ch.tagName)||ch.classList.contains('lbl')});});}
+function pgPages(c){var H=c.clientHeight,base=c.getBoundingClientRect().top-c.scrollTop,bl=[];pgCollect(c,c,base,H,bl);bl.sort(function(a,b){return a.t-b.t;});var st=[0],s0=0,g=0;
+  while(g++<60){var nx=null;for(var i=0;i<bl.length;i++){if(bl[i].b>s0+H+1&&bl[i].t>=s0-1){nx=bl[i].t>s0+1?bl[i].t:s0+H;break;}if(bl[i].b>s0+H+1&&bl[i].t<s0){nx=s0+H;break;}}if(nx==null||nx>=c.scrollHeight-1)break;for(var q=bl.length-1;q>=0;q--){if(bl[q].h&&bl[q].t>s0+1&&bl[q].t<nx&&bl[q].b<=nx+1){var after=bl.filter(function(x){return x.t>=bl[q].b-1&&x.t<nx;});if(!after.length){nx=bl[q].t;}break;}}if(nx<=s0)nx=s0+H;st.push(nx);s0=nx;}return st;}
+function pgApply(c){var st=c._pages,i=c._pi||0,H=c.clientHeight;c.scrollTop=st[i];var s0=c.scrollTop,ns=i+1<st.length?st[i+1]:Infinity,clip=ns<s0+H?Math.ceil(s0+H-ns):0;c.style.clipPath=clip?'inset(0 0 '+clip+'px 0)':'';
+  var pg=c.nextElementSibling;if(pg&&pg.classList.contains('pager')){pg.querySelector('span').textContent=(i+1)+' / '+st.length;pg.children[0].disabled=i===0;pg.children[2].disabled=i===st.length-1;}}
+function fitPg(c){if(c.hidden||c.offsetParent===null)return;var pg=c.nextElementSibling;if(pg&&!pg.classList.contains('pager'))pg=null;
+  var need=c.scrollHeight>c.clientHeight+2;
+  if(!need&&pg&&c.scrollHeight<=c.clientHeight+pg.offsetHeight){pg.remove();pg=null;}
+  if(!need&&!pg){if(c._pages){c._pages=null;c._pi=0;c.style.clipPath='';c.scrollTop=0;}return;}
+  if(need&&!pg){pg=document.createElement('div');pg.className='pager';pg.innerHTML='<button type="button" data-pg="-1" data-say="previous page|scroll up|page up">&lsaquo; Prev page</button><span></span><button type="button" data-pg="1" data-say="next page|scroll down|page down|more">Next page &rsaquo;</button>';
+    pg.onclick=function(e){var b=e.target.closest('[data-pg]');if(!b||b.disabled)return;e.stopPropagation();c._pi=Math.max(0,Math.min(c._pages.length-1,(c._pi||0)+(+b.dataset.pg)));pgApply(c);};c.after(pg);}
+  var keep=c._pi||0,sig=c.scrollHeight+'x'+c.clientHeight;if(c._sig!==sig||!c._pages){c.scrollTop=0;c._pages=pgPages(c);c._sig=sig;}c._pi=Math.min(keep,c._pages.length-1);pgApply(c);}
+function numberBtns(){var on=showNums==null?hfOn:showNums;document.querySelectorAll('[data-n]').forEach(function(b){b.removeAttribute('data-n');});if(!on)return;voiceButtons().forEach(function(b,ix){b.dataset.n=String(ix+1);});}
+var rfT=0,rfBusy=false;function refitSoon(){if(rfT)return;rfT=requestAnimationFrame(function(){rfT=0;refit();});}
+function refit(){if(rfBusy)return;rfBusy=true;try{document.querySelectorAll('.panel,.step,.obody').forEach(function(c){c.classList.add('pg');});document.querySelectorAll('.pg').forEach(fitPg);document.querySelectorAll('.pager').forEach(function(p){var c=p.previousElementSibling;if(!c||!c.classList||!c.classList.contains('pg'))p.remove();});numberBtns();}catch(e){}rfBusy=false;}
+new MutationObserver(function(ms){if(rfBusy)return;for(var i=0;i<ms.length;i++){var t=ms[i].target;if(t.nodeType===1&&(t.closest&&t.closest('.pager,#hfStatus,.toast,#listen')))continue;if(ms[i].type==='attributes'&&ms[i].attributeName==='data-n')continue;refitSoon();return;}}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','class','data-n']});
+addEventListener('resize',function(){document.querySelectorAll('.pg').forEach(function(c){c._sig=null;});refitSoon();});
 function hfStart(){if(!hfOn||document.hidden||hfRec)return;var r;try{r=new SR();}catch(e){setHF(false,true);voiceProblem('Could not start voice input.',GBOARD);return;}
   hfRec=r;r.lang=navigator.language||'en-US';r.continuous=true;r.interimResults=true;r.maxAlternatives=5;var fatal=false,gotAny=false,hst=false;
   var hwd=setTimeout(function(){if(hfRec===r&&!hst&&hfOn){fatal=true;try{r.abort();}catch(e){}micBlocked('timeout');}},5000);
@@ -615,7 +706,7 @@ function hfStart(){if(!hfOn||document.hidden||hfRec)return;var r;try{r=new SR();
   try{r.start();}catch(e){hfRec=null;hfErrors++;if(hfErrors>=4){micBlocked('start');}else hfSchedule();}}
 document.addEventListener('visibilitychange',function(){if(!hfOn)return;if(document.hidden){hfStop();hfShow('Hands-free paused');}else{hfErrors=0;hfStart();}});
 hfBtn.onclick=function(){setHF(!hfOn);};
-micBtn.onclick=function(){if(hfOn){setHF(false);return;}listen(route.name==='form'?'Say an option, e.g. “strong”, “low on stores”, “next”':'Say e.g. “open hive 1” or “add inspection”',function(t){var r=command(t);if(r)toast('✓ '+r);});};
+micBtn.onclick=function(){if(hfOn){setHF(false);return;}listen(route.name==='form'?'Say an option, e.g. “strong”, “low on stores”, “next”':'Say e.g. “open hive 1” or “add inspection”',function(t){t=fixVocab(t);var r=voiceAct(t);toast(r?'Heard “'+t+'” → '+r:'Heard “'+t+'” – no match. Say a button name, or “help”.',!r);});};
 document.getElementById('helpBtn').onclick=openHelp;
 app.addEventListener('click',function(e){var b=e.target.closest('[data-act]');if(!b)return;var a=b.dataset.act;
   if(a==='home')go({name:'home'});
@@ -637,8 +728,8 @@ app.addEventListener('click',function(e){var b=e.target.closest('[data-act]');if
   else if(a==='seg'){var f=b.dataset.f;setSeg(f,draft[f]===b.dataset.v?'':b.dataset.v);}
   else if(a==='rmPhoto'){draftU('photos',draft.photos,'Remove photo');draft.photos.splice(+b.dataset.ix,1);document.getElementById('thumbs').innerHTML=thumbsHtml(draft.photos,true);}
   else if(a==='view'){var ph=route.name==='form'?draft.photos:curInsp().photos;viewer(ph[+b.dataset.ix]);}
-  else if(a==='delHive'){var h=hive(route.id);if(confirm('Delete "'+h.name+'" and all '+h.inspections.length+' inspection(s)? This cannot be undone.')){var bH=capH([h.id]);state.hives=state.hives.filter(function(x){return x!==h;});if(save())pushH('Delete hive “'+h.name+'”',bH);toast('Hive deleted');go({name:'home'});}}
-  else if(a==='delInsp'){if(confirm('Delete this inspection and its photos? This cannot be undone.')){var hv=hive(route.id),bD=capH([hv.id]);hv.inspections=hv.inspections.filter(function(x){return x.id!==route.iid;});if(save())pushH('Delete inspection',bD);toast('Inspection deleted');go({name:'hive',id:route.id});}}
+  else if(a==='delHive'){var h=hive(route.id);askConfirm('Delete “'+h.name+'” and all '+h.inspections.length+' inspection(s)?','Yes, delete hive',function(){var bH=capH([h.id]);state.hives=state.hives.filter(function(x){return x!==h;});if(save())pushH('Delete hive “'+h.name+'”',bH);toast('Hive deleted');go({name:'home'});});}
+  else if(a==='delInsp'){askConfirm('Delete this inspection and its photos?','Yes, delete',function(){var hv=hive(route.id),bD=capH([hv.id]);hv.inspections=hv.inspections.filter(function(x){return x.id!==route.iid;});if(save())pushH('Delete inspection',bD);toast('Inspection deleted');go({name:'hive',id:route.id});});}
 });
 app.addEventListener('input',function(e){var f=e.target.dataset&&e.target.dataset.f;if(f&&draft&&route.name==='form'){draft[f]=e.target.value;clearTimeout(adT);adT=setTimeout(storeDraft,600);}});var adT;
 app.addEventListener('change',function(e){if(e.target.id!=='f_photos')return;var files=[].slice.call(e.target.files||[]);e.target.value='';if(!files.length)return;
@@ -648,8 +739,8 @@ app.addEventListener('change',function(e){if(e.target.id!=='f_photos')return;var
 app.addEventListener('submit',function(e){e.preventDefault();
   if(e.target.id==='hiveForm'){var n=document.getElementById('hName').value.trim();if(!n){toast('Please enter a hive name',true);return;}
     var h={id:uid(),name:n,notes:document.getElementById('hNotes').value.trim(),created:Date.now(),inspections:[]};state.hives.push(h);if(save()){pushH('Add hive “'+n+'”',[{id:h.id,ix:-1,j:null}]);toast('Hive added');go({name:'hive',id:h.id});}}
-  else if(e.target.id==='inspForm'){if((draft.step||0)<2)setStep(draft.step+1);else submitInsp();}});
-window.HiveNotes={restartField:restartField,openMicGuide:openMicGuide,openSetup:openSetup,uaKind:uaKind,fixSteps:fixSteps,micBlocked:micBlocked,setHF:setHF,isHF:function(){return hfOn;},resize:resize,validate:validate,importHives:importHives,command:command,getState:function(){return state;},getDraft:function(){return draft;},hfHandle:hfHandle,fixVocab:fixVocab,pickAlt:pickAlt,isCmd:isCmd,undo:undoLast,undoStack:function(){return ustack;},KEY:KEY,saveDraft:saveDraftNow,exportPdf:exportPdf};
+  else if(e.target.id==='inspForm'){if((draft.step||0)<LASTSTEP)setStep(draft.step+1);else submitInsp();}});
+window.HiveNotes={restartField:restartField,openMicGuide:openMicGuide,openSetup:openSetup,uaKind:uaKind,fixSteps:fixSteps,micBlocked:micBlocked,setHF:setHF,isHF:function(){return hfOn;},resize:resize,validate:validate,importHives:importHives,command:command,getState:function(){return state;},getDraft:function(){return draft;},voiceAct:voiceAct,fixTemp:fixTemp,refit:refit,voiceButtons:voiceButtons,hfHandle:hfHandle,fixVocab:fixVocab,pickAlt:pickAlt,isCmd:isCmd,undo:undoLast,undoStack:function(){return ustack;},KEY:KEY,saveDraft:saveDraftNow,exportPdf:exportPdf};
 (function(){var o=readDraft();if(o&&!hive(o.hive))clearDraft();})();
 try{history.replaceState({d:0,r:{name:'home'}},'');}catch(e){}render();
 document.querySelectorAll('.homeTap').forEach(function(el){var f=function(){stopListen();if(route.name==='form')leaveForm({name:'home'});else go({name:'home'});};el.onclick=f;el.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();f();}};});
