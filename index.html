@@ -61,6 +61,8 @@ header{flex:none;display:flex;align-items:center;gap:8px;padding:8px 10px;paddin
 .logo{width:34px;height:38px;position:relative;flex:none}
 .logo i{position:absolute;width:15px;height:17px;background:var(--amber);clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%)}
 .logo i:nth-child(1){left:0;top:0}.logo i:nth-child(2){left:17px;top:0;background:var(--amber2)}.logo i:nth-child(3){left:8.5px;top:14px;background:#e89a10}
+.resumeBar{display:flex;align-items:center;gap:10px;margin:0 0 12px;padding:10px 12px;border:2px solid var(--honey,#ffb627);border-radius:12px;background:rgba(255,182,39,.08)}.resumeBar .grow{flex:1}.resumeBar button{flex:none}
+.homeTap{cursor:pointer}
 .brand{font-weight:800;font-size:1.2rem;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .icon{min-width:52px;min-height:52px;padding:0;border-radius:50%;font-size:1.3rem}
 #micBtn.on{background:var(--danger);border-color:var(--danger);color:#fff;animation:pulse 1s infinite}
@@ -171,8 +173,8 @@ html.standalone .instOnly{display:none!important}
 </head>
 <body>
 <header>
-  <div class="logo" aria-hidden="true"><i></i><i></i><i></i></div>
-  <div class="brand">Hive Notes</div>
+  <div class="logo homeTap" data-home="1" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="brand homeTap" data-home="1" role="button" tabindex="0" aria-label="Hive Notes – go to Home">Hive Notes</div>
   <button id="backBtn" class="icon" hidden aria-label="Back">&#8592;</button>
   <button id="undoBtn" type="button" class="undoBtn" hidden aria-disabled="true" aria-label="Undo last change" title="Undo last change">&#8630;</button>
   <button id="helpBtn" class="icon" aria-label="Help and backup" title="Help &amp; backup">?</button>
@@ -211,7 +213,10 @@ var ART={
 function empty(art,title,msg,btn,act){return '<div class="card empty">'+ART[art]+'<div class="title">'+title+'</div><p>'+msg+'</p>'+(btn?'<button class="primary" data-act="'+act+'">'+btn+'</button>':'')+'</div>';}
 
 /* ---------- views ---------- */
-function go(r){route=r;render();}
+function rDepth(r){return r.name==='home'?0:(r.name==='hive'||r.name==='addHive')?1:2;}
+var popSkip=0;
+function go(r,noHist){route=r;render();if(noHist)return;try{var st=history.state,cd=st&&typeof st.d==='number'?st.d:0,nd=rDepth(r),rs={d:nd,r:r};
+  if(nd>cd){if(nd===2&&cd===0&&r.id)history.pushState({d:1,r:{name:'hive',id:r.id}},'');history.pushState(rs,'');}else if(nd===cd)history.replaceState(rs,'');else{popSkip=1;history.go(nd-cd);setTimeout(function(){if(popSkip){popSkip=0;history.replaceState({d:rDepth(route),r:route},'');}},400);}}catch(e){}}
 function render(){backBtn.hidden=route.name==='home';var h=({home:vHome,addHive:vAddHive,hive:vHive,form:vForm,insp:vInsp}[route.name]||vHome)();
   app.innerHTML='<section class="screen">'+h+'</section>';if(route.name==='form'){showStep();baseF={};Object.keys(TEXTF).forEach(function(k){baseF[k]=draft[k]||'';});}undoUI();}
 /* ---------- global undo stack ---------- */
@@ -245,7 +250,7 @@ function draftU(f,old,label){if(!draft)return;pushU({t:'draft',f:f,v:Array.isArr
 function commitF(f){if(!draft||route.name!=='form'||!TEXTF[f])return;var v=draft[f]||'',o=baseF[f]||'';if(v===o)return;draftU(f,o,TEXTF[f]+' edit');baseF[f]=v;}
 app.addEventListener('focusout',function(e){var f=e.target.dataset&&e.target.dataset.f;if(f)commitF(f);});
 function vHome(){var n=state.hives.length;
-  var s='<h1>Your hives</h1><p class="sub">'+n+' hive'+(n===1?'':'s')+' &middot; ~'+usage()+' KB of ~5 MB used</p><div class="panel">';
+  var dr=readDraft(),dh=dr&&hive(dr.hive);var s='<h1>Your hives</h1><p class="sub">'+n+' hive'+(n===1?'':'s')+' &middot; ~'+usage()+' KB of ~5 MB used</p>'+(dh?'<div class="resumeBar"><div class="grow">Unfinished inspection for <b>'+esc(dh.name)+'</b></div><button class="primary" data-act="resume" data-id="'+dh.id+'">&#9654; Resume</button></div>':'')+'<div class="panel">';
   if(!n)s+=empty('hive','No hives yet','Add your first hive to start logging inspections. Tip: tap &#127908; and say &ldquo;add hive&rdquo;.','+ Add your first hive','addHive');
   state.hives.forEach(function(h){var c=h.inspections.length,last=c?h.inspections.slice().sort(cmp)[0]:null;
     s+='<button class="card tap" data-act="openHive" data-id="'+h.id+'"><div class="row"><div class="grow"><div class="title">'+esc(h.name)+'</div><div class="meta">'+c+' inspection'+(c===1?'':'s')+(last?' &middot; last '+esc(fmtDate(last.date)):'')+'</div>'+(last&&last.strength?'<span class="pill '+esc(last.strength)+'">'+esc(last.strength)+'</span>':'')+'</div><span class="chev">&rsaquo;</span></div></button>';});
@@ -253,7 +258,7 @@ function vHome(){var n=state.hives.length;
 function micFor(id){return '<button type="button" class="mic" data-act="dictate" data-target="'+id+'" aria-label="Dictate">&#127908;</button><button type="button" class="rst" data-act="restart" data-target="'+id+'" aria-label="Clear this field and dictate again" title="Restart: clear and speak again">&#8634;</button>';}
 function vAddHive(){return '<h1>New hive</h1><form id="hiveForm" class="screen" style="animation:none"><div class="panel"><label for="hName">Hive name *</label><div class="fr"><input id="hName" maxlength="80" placeholder="e.g. Hive 1 – Orchard">'+micFor('hName')+'</div><label for="hNotes">Notes (optional)</label><div class="fr"><textarea id="hNotes" placeholder="Location, origin, queen info…"></textarea>'+micFor('hNotes')+'</div></div><div class="bar"><button type="button" data-act="home">Cancel</button><button class="primary" type="submit">Save hive</button></div></form>';}
 function vHive(){var h=hive(route.id);if(!h){route={name:'home'};return vHome();}
-  var s='<h1>'+esc(h.name)+'</h1>'+(h.notes?'<p class="sub">'+esc(h.notes)+'</p>':'<p class="sub">Inspection history</p>')+'<div class="panel">';
+  var s='<h1>'+esc(h.name)+'</h1>'+(h.notes?'<p class="sub">'+esc(h.notes)+'</p>':'<p class="sub">Inspection history</p>')+(draftFor(h.id)?'<div class="resumeBar"><div class="grow"><b>Unfinished inspection</b><div class="meta">Your draft is saved.</div></div><button class="primary" data-act="resume" data-id="'+h.id+'">&#9654; Resume inspection</button></div>':'')+'<div class="panel">';
   if(!h.inspections.length)s+=empty('note','No inspections yet','Record what you see on your next visit to this hive.','+ Add first inspection','newInsp');
   h.inspections.slice().sort(cmp).forEach(function(i){s+='<button class="card tap" data-act="openInsp" data-id="'+i.id+'"><div class="row"><div class="grow"><div class="title">'+esc(fmtDate(i.date))+'</div><div class="meta">'+[i.weather,i.queenSeen==='yes'?'Queen seen':i.queenSeen==='no'?'Queen not seen':'',i.photos.length?i.photos.length+' photo'+(i.photos.length>1?'s':''):''].filter(Boolean).map(esc).join(' &middot; ')+'</div>'+(i.strength?'<span class="pill '+esc(i.strength)+'">'+esc(i.strength)+'</span>':'')+'</div><span class="chev">&rsaquo;</span></div></button>';});
   return s+'</div><div class="bar"><button class="danger" data-act="delHive">Delete hive</button>'+(h.inspections.length?'<button class="pdfBtn" data-act="pdfHive">&#128196; Save to PDF</button>':'')+''+(h.inspections.length?'<button class="primary" data-act="newInsp">+ Inspection</button>':'')+'</div>';}
@@ -483,8 +488,9 @@ function setSeg(f,v){if(draft&&draft[f]!==v)draftU(f,draft[f],cap(f.replace(/([A
 function addWeather(word){var el=document.getElementById('f_weather'),v=draft.weather||'';if(new RegExp('\\b'+word+'\\b','i').test(v))return;commitF('weather');draftU('weather',draft.weather||'','Weather + '+word);draft.weather=v?v.replace(/[\s,]*$/,'')+', '+word:cap(word);if(el)el.value=draft.weather;}
 
 /* ---------- actions ---------- */
-function newInsp(){draft={step:0,date:today(),weather:'',strength:'',queenSeen:'',brood:'',honey:'',pests:'',treatments:'',notes:'',photos:[]};go({name:'form',id:route.id});}
-function confirmDiscard(){return !(draft&&(draft.photos.length||draft.notes||draft.weather||draft.strength||draft.pests))||confirm('Discard this inspection?');}
+function newInsp(){var ex=readDraft();if(ex&&hive(ex.hive)){if(ex.hive===route.id)return resumeDraft(ex.hive);if(!confirm('You have an unfinished inspection for “'+hive(ex.hive).name+'”. Discard it and start a new one here?'))return;clearDraft();}draft={step:0,date:today(),weather:'',strength:'',queenSeen:'',brood:'',honey:'',pests:'',treatments:'',notes:'',photos:[]};go({name:'form',id:route.id});}
+function hasData(d){return !!(d&&((d.photos&&d.photos.length)||d.notes||d.weather||d.strength||d.queenSeen||d.brood||d.honey||d.pests||d.treatments));}
+function confirmDiscard(){return !hasData(draft)||confirm('Discard this inspection? Everything entered will be lost.');}
 
 /* ---------- Save to PDF (print view) ---------- */
 function pdfHtml(hs,title){var d=new Date();
@@ -503,11 +509,15 @@ var DKEY='hiveNotes.draft';
 function storeDraft(){if(!draft||route.name!=='form')return false;var o={hive:route.id,t:Date.now(),d:draft};try{localStorage.setItem(DKEY,JSON.stringify(o));return true;}catch(e){try{o.d=Object.assign({},draft,{photos:[]});localStorage.setItem(DKEY,JSON.stringify(o));toast('Saved text ✓ (photos too large to keep in draft)',true);return 'nophotos';}catch(e2){toast('Could not save draft: storage full',true);return false;}}}
 function clearDraft(){try{localStorage.removeItem(DKEY);}catch(e){}}
 function saveDraftNow(){var r=storeDraft();if(r===true)toast('Saved ✓');}
+function readDraft(){try{var o=JSON.parse(localStorage.getItem(DKEY));if(o&&o.d&&o.hive)return o;}catch(e){}return null;}
+function draftFor(id){var o=readDraft();return o&&o.hive===id?o:null;}
+function resumeDraft(id){var o=draftFor(id);if(!o){toast('No saved draft for this hive',true);return;}draft=Object.assign({step:0,photos:[]},o.d);if(!Array.isArray(draft.photos))draft.photos=[];go({name:'form',id:id});}
+function leaveForm(target,noHist){var id=route.id;if(hasData(draft)){storeDraft();toast('Draft saved — tap Resume inspection to continue');}else clearDraft();draft=null;dropDraftU();go(target||{name:'hive',id:id},noHist);}
 function restoreDraft(){try{var o=JSON.parse(localStorage.getItem(DKEY));if(o&&o.d&&hive(o.hive)){draft=Object.assign({step:0,photos:[]},o.d);if(!Array.isArray(draft.photos))draft.photos=[];route={name:'form',id:o.hive};return true;}if(o)clearDraft();}catch(e){clearDraft();}return false;}
 function cancelForm(){if(confirmDiscard()){clearDraft();draft=null;dropDraftU();go({name:'hive',id:route.id});}}
 function submitInsp(){var hv=hive(route.id),ins=Object.assign({id:uid(),created:Date.now()},draft);delete ins.step;ins.date=ins.date||today();var bI=capH([hv.id]);hv.inspections.push(ins);
   if(save()){clearDraft();draft=null;dropDraftU();pushH('Save inspection',bI);toast('Inspection saved');go({name:'hive',id:route.id});}}
-backBtn.onclick=function(){stopListen();if(route.name==='form'){if((draft.step||0)>0)return setStep(draft.step-1);return cancelForm();}
+backBtn.onclick=function(){stopListen();if(route.name==='form')return leaveForm();
   if(route.name==='hive'||route.name==='addHive')go({name:'home'});else if(route.name==='insp')go({name:'hive',id:route.id});};
 
 /* ---------- inline manifest (single-file use) ---------- */
@@ -568,6 +578,7 @@ micBtn.onclick=function(){if(hfOn){setHF(false);return;}listen(route.name==='for
 document.getElementById('helpBtn').onclick=openHelp;
 app.addEventListener('click',function(e){var b=e.target.closest('[data-act]');if(!b)return;var a=b.dataset.act;
   if(a==='home')go({name:'home'});
+  else if(a==='resume')resumeDraft(b.dataset.id);
   else if(a==='addHive')go({name:'addHive'});
   else if(a==='openHive')go({name:'hive',id:b.dataset.id});
   else if(a==='newInsp')newInsp();
@@ -598,7 +609,16 @@ app.addEventListener('submit',function(e){e.preventDefault();
     var h={id:uid(),name:n,notes:document.getElementById('hNotes').value.trim(),created:Date.now(),inspections:[]};state.hives.push(h);if(save()){pushH('Add hive “'+n+'”',[{id:h.id,ix:-1,j:null}]);toast('Hive added');go({name:'hive',id:h.id});}}
   else if(e.target.id==='inspForm'){if((draft.step||0)<2)setStep(draft.step+1);else submitInsp();}});
 window.HiveNotes={restartField:restartField,openMicGuide:openMicGuide,openSetup:openSetup,uaKind:uaKind,fixSteps:fixSteps,micBlocked:micBlocked,setHF:setHF,isHF:function(){return hfOn;},resize:resize,validate:validate,importHives:importHives,command:command,getState:function(){return state;},getDraft:function(){return draft;},undo:undoLast,undoStack:function(){return ustack;},KEY:KEY,saveDraft:saveDraftNow,exportPdf:exportPdf};
-var restored=restoreDraft();render();if(restored)toast('Restored your unsaved inspection draft');
+(function(){var o=readDraft();if(o&&!hive(o.hive))clearDraft();})();
+try{history.replaceState({d:0,r:{name:'home'}},'');}catch(e){}render();
+document.querySelectorAll('.homeTap').forEach(function(el){var f=function(){stopListen();if(route.name==='form')leaveForm({name:'home'});else go({name:'home'});};el.onclick=f;el.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();f();}};});
+window.addEventListener('popstate',function(e){if(popSkip){popSkip=0;try{history.replaceState({d:rDepth(route),r:route},'');}catch(x){}return;}
+  try{stopListen();}catch(x){}var st=e.state,t=st&&st.r?st.r:{name:'home'};
+  if(t.name==='form'){if(draftFor(t.id)&&route.name!=='form'){var o=draftFor(t.id);draft=Object.assign({step:0,photos:[]},o.d);return go(t,true);}t={name:'hive',id:t.id};}
+  if(t.name==='insp'&&!(hive(t.id)&&hive(t.id).inspections.some(function(i){return i.id===t.iid;})))t={name:hive(t.id)?'hive':'home',id:t.id};
+  if((t.name==='hive'||t.name==='insp')&&!hive(t.id))t={name:'home'};
+  if(route.name==='form')leaveForm(t,true);else go(t,true);
+  try{history.replaceState({d:rDepth(route),r:route},'');}catch(x){}});
 
 hfUI();try{if(localStorage.getItem(HFKEY)==='1')setHF(true,true);}catch(e){}
 })();
