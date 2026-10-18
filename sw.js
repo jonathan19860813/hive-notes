@@ -1,5 +1,5 @@
 /* Hive Notes service worker */
-const VERSION = 'hive-notes-v24';
+const VERSION = 'hive-notes-v25';
 const SHELL = ['./', './index.html', './manifest.json', './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-512-maskable.png', './icons/icon.svg', './Hive-Notes-Install-Guide.pdf', './Hive-Notes-Microphone-Guide.pdf'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL.map(u => new Request(u, {cache: 'reload'})))).then(() => self.skipWaiting()));
@@ -9,6 +9,7 @@ self.addEventListener('activate', e => {
 });
 self.addEventListener('fetch', e => {
   const req = e.request;
+  // never touch API calls (OpenAI etc.) or any non-GET / cross-origin request
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
   if (req.mode === 'navigate') {
     // network first for pages so updates arrive; fall back to cached shell offline
