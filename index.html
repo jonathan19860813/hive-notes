@@ -439,7 +439,7 @@ function retryMic(){clearBlock();if(insecure())return micBlocked(isFileProto()?'
   if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia){navigator.mediaDevices.getUserMedia({audio:true}).then(function(st){st.getTracks().forEach(function(t){t.stop();});toast('Microphone allowed ✓');go();},function(e){micBlocked(e&&e.name==='NotFoundError'?'start':'denied');});}
   else go();}
 function checkPermDenied(cb){try{if(navigator.permissions&&navigator.permissions.query)navigator.permissions.query({name:'microphone'}).then(function(p){if(p.state==='denied')cb();},function(){});}catch(e){}}
-function listen(label,onFinal,btn){
+function listen(label,onFinal,btn){requestWakeLock();
   btn=btn||micBtn;
   if(rec){stopListen();return;}                       // second tap = stop
   if(!SR){voiceProblem('Voice input isn’t available in this browser.',GBOARD);return;}
@@ -650,6 +650,16 @@ function hfHandle(t){t=fixVocab(t);var el=hfField(),n=norm(t);lastHeard=t;
     if(el.dataset.f)commitF(el.dataset.f);}
   var r=voiceAct(t);hfShow('Hands-free listening',heardMsg(t,r?r:'no match – try a button name, or say “help”'),true);}
 
+/* ---------- screen wake lock ---------- */
+var wakeLock=null,wlBusy=false;
+function requestWakeLock(){if(!('wakeLock' in navigator)||!navigator.wakeLock||document.visibilityState!=='visible'||wlBusy||(wakeLock&&!wakeLock.released))return;wlBusy=true;
+  try{navigator.wakeLock.request('screen').then(function(l){wlBusy=false;wakeLock=l;try{l.addEventListener('release',function(){if(wakeLock===l)wakeLock=null;if(document.visibilityState==='visible')setTimeout(requestWakeLock,500);});}catch(e){}},function(){wlBusy=false;});}catch(e){wlBusy=false;}}
+function releaseWakeLock(){var l=wakeLock;wakeLock=null;if(l&&!l.released){try{var p=l.release();if(p&&p.catch)p.catch(function(){});}catch(e){}}}
+requestWakeLock();
+['pointerdown','keydown','touchstart'].forEach(function(ev){document.addEventListener(ev,requestWakeLock,{passive:true,capture:true});});
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')requestWakeLock();});
+addEventListener('pagehide',releaseWakeLock);
+addEventListener('pageshow',requestWakeLock);
 /* ---------- in-app camera ---------- */
 var cam=null,CAM_OPEN=/^(open (the )?camera|camera|start (the )?camera|show (the )?camera|open (the )?photos?)$/,CAM_SNAP=/^(take (a |the |another )?(photo|picture|pic|snap|shot)|snap|snap it|cheese|say cheese|capture|shoot|take it|photo|picture)( please| now)?$/,CAM_CLOSE=/^(close (the )?camera|close|done|stop (the )?camera|exit( camera)?|camera off|finish)$/;
 function camMsg(m){if(!cam)return;var e=cam.ov.querySelector('.camMsg');e.textContent=m;clearTimeout(cam.mt);cam.mt=setTimeout(function(){if(cam)e.textContent='';},1800);}
@@ -751,7 +761,7 @@ var rfT=0,rfBusy=false;function refitSoon(){if(rfT)return;rfT=requestAnimationFr
 function refit(){if(rfBusy)return;rfBusy=true;try{document.querySelectorAll('.panel,.step,.obody').forEach(function(c){c.classList.add('pg');});document.querySelectorAll('.pg').forEach(fitPg);document.querySelectorAll('.pager').forEach(function(p){var c=p.previousElementSibling;if(!c||!c.classList||!c.classList.contains('pg'))p.remove();});numberBtns();}catch(e){}rfBusy=false;}
 new MutationObserver(function(ms){if(rfBusy)return;for(var i=0;i<ms.length;i++){var t=ms[i].target;if(t.nodeType===1&&(t.closest&&t.closest('.pager,#hfStatus,.toast,#listen')))continue;if(ms[i].type==='attributes'&&ms[i].attributeName==='data-n')continue;refitSoon();return;}}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','class','data-n']});
 addEventListener('resize',function(){document.querySelectorAll('.pg').forEach(function(c){c._sig=null;});refitSoon();});
-function hfStart(){if(!hfOn||document.hidden||hfRec)return;var r;try{r=new SR();}catch(e){setHF(false,true);voiceProblem('Could not start voice input.',GBOARD);return;}
+function hfStart(){if(!hfOn||document.hidden||hfRec)return;requestWakeLock();var r;try{r=new SR();}catch(e){setHF(false,true);voiceProblem('Could not start voice input.',GBOARD);return;}
   hfRec=r;r.lang=navigator.language||'en-US';r.continuous=true;r.interimResults=true;r.maxAlternatives=5;var fatal=false,gotAny=false,hst=false;
   var hwd=setTimeout(function(){if(hfRec===r&&!hst&&hfOn){fatal=true;try{r.abort();}catch(e){}micBlocked('timeout');}},5000);
   r.onstart=function(){hst=true;clearTimeout(hwd);clearBlock();if(hfRec===r)hfShow('Hands-free listening');};
