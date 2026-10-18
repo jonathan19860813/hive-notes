@@ -195,6 +195,7 @@ ol.setup{padding-left:24px;margin:0}ol.setup li{margin:0 0 12px;color:var(--mute
 .camOv .camMsg{position:absolute;left:12px;right:12px;bottom:96px;text-align:center;color:#fff;font-weight:800;font-size:1.15rem;text-shadow:0 1px 4px #000;pointer-events:none}
 @media (max-height:680px){h1{font-size:1.25rem}.sub{margin-bottom:4px;-webkit-line-clamp:1}.step textarea{height:92px}.step .seg button{min-height:60px}.resumeBar{padding:6px 10px;margin-bottom:6px}.card{padding:10px 12px;margin-bottom:8px}}
 .irow{display:flex;gap:6px;align-items:stretch}.irow>.card{flex:1;min-width:0}.idel{flex:0 0 44px;min-width:44px;padding:0;font-size:1.15rem;border-radius:12px;margin:0 0 10px}
+.sub.hn{cursor:pointer;white-space:pre-wrap}.sub.hn.open{display:block;-webkit-line-clamp:unset;max-height:38vh;overflow:auto}
 .delDraft{flex:0 0 48px!important;min-width:48px;padding:0!important;font-size:1.3rem!important}
 .saveDraft{flex:0 0 auto!important;background:transparent;border:2px solid var(--honey,#ffb627);color:var(--honey,#ffb627);font-weight:700}
 .instBtn{width:100%}
@@ -323,7 +324,7 @@ function vHome(){var n=state.hives.length;
 function micFor(id){return '<button type="button" class="mic" data-act="dictate" data-target="'+id+'" aria-label="Dictate">&#127908;</button><button type="button" class="rst" data-act="restart" data-target="'+id+'" aria-label="Clear this field and dictate again" title="Restart: clear and speak again">&#8634;</button>';}
 function vAddHive(){ahReset();return '<h1>New hive</h1><form id="hiveForm" class="screen" style="animation:none"><div class="panel"><label for="hName">Hive name *</label><div class="fr"><input id="hName" maxlength="80" placeholder="e.g. Hive 1 – Orchard">'+micFor('hName')+'</div><label for="hNotes">Notes (optional)</label><div class="fr"><textarea id="hNotes" placeholder="Location, origin, queen info…"></textarea>'+micFor('hNotes')+'</div></div><div class="bar"><button type="button" data-act="home">Cancel</button><button class="primary" type="submit">Save hive</button></div></form>';}
 function vHive(){var h=hive(route.id);if(!h){route={name:'home'};return vHome();}
-  var s='<h1>'+esc(h.name)+'</h1>'+(h.notes?'<p class="sub">'+esc(h.notes)+'</p>':'<p class="sub">Inspection history</p>')+(draftFor(h.id)?'<div class="resumeBar"><div class="grow"><b>Unfinished inspection</b><div class="meta">Your draft is saved.</div></div><button class="primary" data-act="resume" data-say="resume|resume inspection|continue inspection" data-id="'+h.id+'">&#9654; Resume inspection</button></div>':'')+'<div class="panel">';
+  var s='<h1>'+esc(h.name)+'</h1>'+(h.notes?'<p class="sub hn" title="Tap to show all notes">'+esc(h.notes)+'</p>':'<p class="sub">Inspection history</p>')+(draftFor(h.id)?'<div class="resumeBar"><div class="grow"><b>Unfinished inspection</b><div class="meta">Your draft is saved.</div></div><button class="primary" data-act="resume" data-say="resume|resume inspection|continue inspection" data-id="'+h.id+'">&#9654; Resume inspection</button></div>':'')+'<div class="panel">';
   if(!h.inspections.length)s+=empty('note','No inspections yet','Record what you see on your next visit to this hive.','+ Add first inspection','newInsp');
   h.inspections.slice().sort(cmp).forEach(function(i){s+='<div class="irow"><button class="card tap" data-act="openInsp" data-id="'+i.id+'" data-say="'+esc(fmtDate(i.date))+'"><div class="row"><div class="grow"><div class="title">'+esc(fmtDate(i.date))+'</div><div class="meta">'+[i.weather,i.queenSeen==='yes'?'Queen seen':i.queenSeen==='no'?'Queen not seen':'',i.photos.length?i.photos.length+' photo'+(i.photos.length>1?'s':''):''].filter(Boolean).map(esc).join(' &middot; ')+'</div>'+(i.strength?'<span class="pill '+esc(i.strength)+'">'+esc(i.strength)+'</span>':'')+'</div><span class="chev">&rsaquo;</span></div></button><button type="button" class="danger idel" data-act="delInsp" data-iid="'+i.id+'" aria-label="Delete inspection '+esc(fmtDate(i.date))+'" title="Delete inspection" data-say="delete '+esc(fmtDate(i.date))+'">&#128465;</button></div>';});
   return s+'</div><div class="bar"><button class="danger" data-act="delHive" data-say="delete hive|remove hive">Delete hive</button>'+(h.inspections.length?'<button class="pdfBtn" data-act="pdfHive" data-say="save to pdf|pdf|print|export pdf">&#128196; Save to PDF</button>':'')+''+(h.inspections.length?'<button class="primary" data-act="newInsp" data-say="inspection|new inspection|add inspection|start inspection">+ Inspection</button>':'')+'</div>';}
@@ -424,7 +425,7 @@ function setInd(state,msg,heard){
   ind.querySelector('.dot').style.display=state==='error'?'none':'';ind.querySelector('button').textContent=state==='error'?'Close':'Stop';
   ind.style.borderColor=state==='error'?'var(--amber)':'';}
 function endUI(keep){clearTimeout(watchdog);if(recBtn)recBtn.classList.remove('on');micBtn.classList.remove('on');recBtn=null;rec=null;if(ind&&!keep){ind.remove();ind=null;}}
-function stopListen(){if(rec){var r=rec;rec=null;try{r.abort();}catch(e){}}endUI();}
+function stopListen(){if(rec){var r=rec;rec=null;r._user=true;try{r.abort();}catch(e){}try{if(r._flush)r._flush();}catch(e){}}endUI();}
 function voiceProblem(msg,extra){endUI(true);setInd('error',msg+(extra?' '+extra:''),'');var i=ind;setTimeout(function(){if(ind===i&&ind.dataset.state==='error'){ind.remove();ind=null;}},12000);}
 
 
@@ -482,6 +483,9 @@ function permDenied(cb){try{if(!(navigator.permissions&&navigator.permissions.qu
   q().then(function(p){if(p.state!=='denied')return;setTimeout(function(){q().then(function(p2){if(p2.state==='denied')cb();},function(){});},700);},function(){});}catch(e){}}
 var voiceWorked=false,hfPausedPTT=false,pttRetry=false;
 function resumeHF(){if(!hfPausedPTT)return;setTimeout(function(){if(rec||pttRetry||!hfPausedPTT)return;hfPausedPTT=false;if(hfOn){hfErrors=0;hfStart();}},400);}
+var SR_LANGS=(function(){var L=(navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||'']).filter(Boolean),en=L.filter(function(x){return /^en\b/i.test(x);})[0],o=[];[en,'en-ZA','en-GB','en-US'].forEach(function(x){if(x&&o.indexOf(x)<0)o.push(x);});return o;})(),srLi=0;
+function srLang(){return SR_LANGS[Math.min(srLi,SR_LANGS.length-1)];}
+function srLangNext(){if(srLi<SR_LANGS.length-1){srLi++;return true;}return false;}
 function listen(label,onFinal,btn,opts){requestWakeLock();opts=opts||{};
   btn=btn||micBtn;
   if(rec){stopListen();resumeHF();return;}                       // second tap = stop
@@ -491,26 +495,29 @@ function listen(label,onFinal,btn,opts){requestWakeLock();opts=opts||{};
   var tries=opts._try||0;pttRetry=false;
   var r;try{r=new SR();}catch(e){voiceProblem('Could not start voice input ('+e.message+').',GBOARD);resumeHF();return;}
   rec=r;recBtn=btn;btn.classList.add('on');
-  r.lang=navigator.language||'en-US';r.interimResults=true;r.continuous=!!opts.cont;r.maxAlternatives=5;
+  r.lang=srLang();r.interimResults=true;r.continuous=!!opts.cont;r.maxAlternatives=5;
   var got='',tmp0='',started=false,failed=false,sil=null;
   setInd('starting',tries?'Reconnecting voice…':label,'');
   function retry(){failed=true;clearTimeout(watchdog);clearTimeout(sil);if(rec===r){rec=null;try{r.abort();}catch(e){}}
     if(tries<2){pttRetry=true;setInd('starting','Reconnecting voice…','');setTimeout(function(){pttRetry=false;var o=Object.assign({},opts,{_try:tries+1});if(recBtn)recBtn.classList.remove('on');recBtn=null;listen(label,onFinal,btn,o);},700);}
     else{endUI(true);voiceProblem('Voice didn’t start – weak signal or the mic is busy. Tap the mic to try again.',GBOARD);resumeHF();}}
-  function deliver(g){endUI(true);setInd('done',label,g);var i=ind;setTimeout(function(){if(ind===i){ind.remove();ind=null;}},1500);resumeHF();try{onFinal(g);}catch(err){toast('Error: '+err.message,true);}}
+  r._flush=function(){if(failed||r._dl)return;var g=(got+' '+tmp0).trim();failed=true;if(g)deliver(g);};
+  function deliver(g){r._dl=true;endUI(true);setInd('done',label,g);var i=ind;setTimeout(function(){if(ind===i){ind.remove();ind=null;}},1500);resumeHF();try{onFinal(g);}catch(err){toast('Error: '+err.message,true);}}
   r.onstart=r.onaudiostart=function(){if(rec!==r)return;started=true;clearTimeout(watchdog);clearBlock();setInd('listening',label);};
   r.onresult=function(e){if(rec!==r)return;var fin='',tmp='';r._f=r._f||[];for(var i=Math.min(e.resultIndex,e.results.length);i<e.results.length;i++){var t=e.results[i].isFinal?pickAlt(e.results[i]):e.results[i][0].transcript;if(e.results[i].isFinal){fin+=t;r._f[i]=t.trim();}else tmp+=t;}
     if(fin){voiceWorked=true;got=joinFinals(r._f);}tmp0=tmp.trim();setInd(fin?'done':'listening',label,(got+(tmp0?' '+tmp0:'')).trim());
-    if(opts.cont){clearTimeout(sil);sil=setTimeout(function(){if(rec===r){try{r.stop();}catch(x){}}},2500);}};
+    if(opts.cont){clearTimeout(sil);sil=setTimeout(function(){if(rec===r){try{r.stop();}catch(x){}}},8000);}};
   r.onerror=function(e){if(rec!==r)return;var er=e.error;
     if(er==='aborted'){failed=true;endUI();resumeHF();return;}
     if(er==='not-allowed'||er==='service-not-allowed'){failed=true;if(voiceWorked){permDenied(function(){micBlocked('denied');});endUI(true);voiceProblem('Voice stopped – tap the mic to try again.');resumeHF();return;}micBlocked(er);return;}
     if(er==='audio-capture'){retry();return;}
-    if(er==='no-speech'){failed=true;var g0=(got+' '+tmp0).trim();if(g0)return deliver(g0);voiceProblem(VERR['no-speech']);resumeHF();return;}
+    if(er==='language-not-supported'&&srLangNext()){retry();return;}
+    if(er==='no-speech'){failed=true;var g0=(got+' '+tmp0).trim();if(g0)return deliver(g0);if(opts._chain){endUI(true);resumeHF();return;}voiceProblem(VERR['no-speech']);resumeHF();return;}
     failed=true;if(er==='network'){var g1=(got+' '+tmp0).trim();if(g1)return deliver(g1);voiceProblem('Waiting for signal… '+VERR.network,GBOARD);resumeHF();return;}
     voiceProblem(VERR[er]||('Voice error: '+er+'.'),GBOARD);resumeHF();};
   r.onnomatch=function(){if(rec!==r)return;var g=(got+' '+tmp0).trim();if(g){failed=true;return deliver(g);}failed=true;voiceProblem('Couldn’t understand that. Try again, a bit slower.');resumeHF();};
   r.onend=function(){if(rec!==r)return;clearTimeout(sil);if(failed)return;var g=(got+' '+tmp0).trim();
+    if(g&&opts.cont&&(opts._chain||0)<30){rec=null;deliver(g);var o2=Object.assign({},opts,{_chain:(opts._chain||0)+1,_try:0});setTimeout(function(){if(!rec&&document.body.contains(btn))listen(label,onFinal,btn,o2);},250);return;}
     if(g)deliver(g);
     else if(!started)retry();
     else{voiceProblem(VERR['no-speech']);resumeHF();}};
@@ -538,7 +545,21 @@ var FIXES=[
  [/^\s*(whether|wetter)\b/i,'weather'],
  [/^\s*(nodes|knots|note)\b/i,'notes'],
  [/^\s*(pets|pest)\b/i,'pests'],
- [/\b(honey stalls|honey stores?|honey store's)\b/gi,'honey stores']
+ [/\b(honey stalls|honey stores?|honey store's)\b/gi,'honey stores'],
+ [/\b(mights|might's|mytes|mite's)\b/gi,'mites'],
+ [/\b(ox alec|ox alic|oxallic|ox alick|oxalis acid)\b/gi,'oxalic'],
+ [/\b(a pivar|happy var|apiva|appy var)\b/gi,'Apivar'],
+ [/\b(prop a list|proper list|propellers|propolice)\b/gi,'propolis'],
+ [/\b(super seed your|super seizure|super seeder|supercedure)\b/gi,'supersedure'],
+ [/\bqueen (exclude her|excluded|ex cluder)\b/gi,'queen excluder'],
+ [/\b(re queen|requeened|re-queen)\b/gi,function(m){return /ed$/i.test(m)?'requeened':'requeen';}],
+ [/\bwax (moss|mouth|moths)\b/gi,'wax moth'],
+ [/\b(nuke|nook) (box|hive)\b/gi,'nuc $2'],
+ [/\blaying (walker|worker's)\b/gi,'laying worker'],
+ [/\b(chalk brewed|chalk broad|chuck brood)\b/gi,'chalkbrood'],
+ [/\bfoul (brewed|broad)\b/gi,'foulbrood'],
+ [/\b(drone comb|drawn comb)\b/gi,function(m){return m.toLowerCase();}],
+ [/\b(brood box|broad box|brewed box)\b/gi,'brood box']
 ];
 var NW={zero:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19},TW={twenty:20,thirty:30,forty:40,fourty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90};
 function fixTemp(t){
@@ -554,7 +575,7 @@ var TEMP_RE=/-?\d+(?:[.,]\d+)?°[CF]/;
 function isTempPhrase(t){if(!TEMP_RE.test(t))return false;var rest=norm(t.replace(/-?\d+(?:[.,]\d+)?°[CF]/g,' ')).split(' ').filter(Boolean);return rest.every(function(x){return /^(it|its|it s|s|is|was|about|around|roughly|and|a|bit|today|outside|weather|temperature|temp|now|the|very|quite|but|with|degrees?)$/.test(x)||WEATHER.indexOf(x)>=0;});}
 var VOCAB=['varroa','brood','queen','cells','super','hive','tool','capped','beetle','nectar','foundation','swarm','drone','larvae','eggs','honey','stores','strength','strong','weak','medium','solid','spotty','patchy','weather','pests','notes','treatments','next','back','save','done','home','photo','sunny','cloudy','windy','calm','rainy','mites','seen','frames','comb'];
 function vocabScore(t){var w=norm(t).split(' '),s=0;w.forEach(function(x){if(VOCAB.indexOf(x)>=0)s+=1;});if(isCmd(norm(t)))s+=3;if(TEMP_RE.test(t))s+=10;return s;}
-function pickAlt(res){var best=null,bs=-1;for(var i=0;i<res.length;i++){var raw=res[i].transcript,f=fixVocab(raw),sc=vocabScore(f)-i*0.5+(f!==raw?0.2:0);if(sc>bs){bs=sc;best=f;}}return best==null?'':best;}
+function pickAlt(res){var best=null,bs=-1,w0=res.length?norm(res[0].transcript).split(' ').length:0;for(var i=0;i<res.length;i++){var raw=res[i].transcript,f=fixVocab(raw),wn=norm(f).split(' ').length,sc=vocabScore(f)-i*0.5+(f!==raw?0.2:0)-(wn<w0*0.8?3:0);if(sc>bs){bs=sc;best=f;}}return best==null?'':best;}
 var FIELDKW=/^(weather|pests?|disease|mites|varroa|treatments?|treated|notes?|comment|date)\b/;
 function isCmd(n,raw){if(!n)return false;if(raw&&isTempPhrase(raw))return true;if(/^undo\b|\bundo$/.test(n))return true;if(/^((start|begin|end|finish|stop) (an |the |a |this )?(apiary )?round|next hive|skip( hive)?|(continue|resume) round)$/.test(n))return true;if(CAM_OPEN.test(n)||CAM_SNAP.test(n)||/^((switch|flip|other|back|rear|hive|front|selfie) camera)$/.test(n))return true;if(/^(undo|scroll (up|down)|page (up|down)|(next|previous|prev) page|show numbers|hide numbers|(press|number|button|tap) \d+)$/.test(n))return true;
   if(/^(next|continue|back|previous|go back|save|done|finish|cancel|stop|go home|home|open home|photo|photos|take a? ?photo|add photos?|picture|camera|help|undo|undo last)( inspection| please)?$/.test(n))return true;
@@ -574,7 +595,8 @@ function restartField(el){if(!el)return;stopListen();clearField(el);
   if(SR&&!insecure())dictateInto(el);else el.focus();}
 var vIns={};
 function vWords(x){return norm(x).split(' ').filter(Boolean);}
-function voiceInsert(el,t){t=String(t||'').trim();if(!el||!t)return false;var k=el.id,now=Date.now(),L=vIns[k],v=el.value||'';
+function vTidy(t,prev){t=t.replace(/\s*\b(full stop|period)\b/gi,'.').replace(/\s*\bcomma\b/gi,',').replace(/\s*\bquestion mark\b/gi,'?').replace(/\s*\b(exclamation mark)\b/gi,'!').replace(/\s*\b(new line|next line|new paragraph)\b\s*/gi,'\n').replace(/\bi\b/g,'I').replace(/([.!?]\s+|\n)([a-z])/g,function(m,a,b){return a+b.toUpperCase();});if(!/\S/.test(prev||'')||/[.!?\n]\s*$/.test(prev||''))t=t.replace(/^\s*([a-z])/,function(m,a){return a.toUpperCase();});return t;}
+function voiceInsert(el,t){t=String(t||'').trim();if(!el||!t)return false;if(el.tagName==='TEXTAREA')t=vTidy(t,el.value);var k=el.id,now=Date.now(),L=vIns[k],v=el.value||'';
   var tw=vWords(t),fw=vWords(v);
   if(L&&now-L.at<6000&&fw.length){var lw=vWords(L.t);
     // exact repeat of the last insertion, or text already at the field tail
@@ -582,10 +604,10 @@ function voiceInsert(el,t){t=String(t||'').trim();if(!el||!t)return false;var k=
     // growing transcript: new text starts with what we just inserted -> keep only the new part
     if(lw.length&&tw.slice(0,lw.length).join(' ')===lw.join(' ')){var rw=t.split(/\s+/);t=rw.slice(lw.length).join(' ');if(!t)return false;tw=vWords(t);}
     // longest overlap between field tail and start of new text
-    for(var n=Math.min(tw.length,fw.length);n>=2;n--){if(fw.slice(-n).join(' ')===tw.slice(0,n).join(' ')){t=t.split(/\s+/).slice(n).join(' ');break;}}
+    for(var n=Math.min(tw.length,fw.length);n>=3;n--){if(fw.slice(-n).join(' ')===tw.slice(0,n).join(' ')){t=t.split(/\s+/).slice(n).join(' ');break;}}
     if(!t.trim())return false;}
   var f=el.dataset&&el.dataset.f;if(f)commitF(f);if(k==='hName'||k==='hNotes'){ahH[k].push(v);ahT[k]=0;}
-  el.value=(v&&!/\s$/.test(v)?v+' ':v)+t.trim();if(k==='hName'||k==='hNotes'){ahCur[k]=el.value;ahT[k]=Date.now();}el.dispatchEvent(new Event('input',{bubbles:true}));if(k==='hName'||k==='hNotes')ahT[k]=Date.now();if(f)commitF(f);
+  el.value=(v&&!/\s$/.test(v)&&!/^[.,?!\n]/.test(t)?v+' ':v)+t.trim();if(k==='hName'||k==='hNotes'){ahCur[k]=el.value;ahT[k]=Date.now();}el.dispatchEvent(new Event('input',{bubbles:true}));if(k==='hName'||k==='hNotes')ahT[k]=Date.now();if(f)commitF(f);if(el.tagName==='TEXTAREA'){try{el.scrollTop=el.scrollHeight;}catch(e){}}
   vIns[k]={t:(L&&now-L.at<6000&&k in vIns?((vIns[k].t+' '+t).trim()):t),at:now};vIns[k].t=t;vIns[k].at=now;return true;}
 function undoBox(){var el=null;if(route.name==='form'&&draft&&actT&&TEXTF[actT])el=document.getElementById('f_'+actT);else if(route.name==='addHive'&&(actT==='hName'||actT==='hNotes'))el=document.getElementById(actT);
   if(!el)return null;if(!el.value)return 'Nothing to undo – '+vtName(actT)+' is empty';var f=el.dataset&&el.dataset.f,k=el.id;if(f)commitF(f);if(k==='hName'||k==='hNotes'){ahH[k].push(el.value);ahT[k]=0;}
@@ -650,6 +672,7 @@ var ahH={hName:[],hNotes:[]},ahCur={hName:'',hNotes:''},ahT={};
 function ahReset(){ahH={hName:[],hNotes:[]};ahCur={hName:'',hNotes:''};ahT={};}
 function ahUndo(){var k=(actT==='hName'||actT==='hNotes')?actT:null;if(!k||!ahH[k].length)return 'Nothing to undo';var el=document.getElementById(k);var v=ahH[k].pop();ahCur[k]=v;if(el)el.value=v;ahT[k]=0;return 'Undid '+(k==='hName'?'Name':'Notes');}
 app.addEventListener('input',function(e){var k=e.target&&e.target.id;if(route.name!=='addHive'||(k!=='hName'&&k!=='hNotes'))return;var now=Date.now();if(!ahT[k]||now-ahT[k]>1000)ahH[k].push(ahCur[k]);ahT[k]=now;ahCur[k]=e.target.value;});
+app.addEventListener('click',function(e){var p=e.target.closest&&e.target.closest('.sub.hn');if(p)p.classList.toggle('open');});
 app.addEventListener('focusin',function(e){if(e.target&&e.target.id==='f_weather'&&wxLock){wxLock=false;}var t=e.target,k=(t.id==='hName'||t.id==='hNotes')?t.id:(t.dataset&&t.dataset.f);if(k&&vtList().indexOf(k)>=0&&k!==actT){actT=k;applyVT();}});
 function setSeg(f,v){if(draft&&draft[f]!==v)draftU(f,draft[f],cap(f.replace(/([A-Z])/g,' $1').toLowerCase())+' '+(v?'→ '+v:'cleared'));draft[f]=v;app.querySelectorAll('[data-act=seg][data-f="'+f+'"]').forEach(function(x){x.setAttribute('aria-pressed',x.dataset.v===v);});}
 function wxStem(x){return x.replace(/(ie|ey|i|ee)$/,'y');}
@@ -931,17 +954,17 @@ addEventListener('resize',function(){document.querySelectorAll('.pg').forEach(fu
 function hfStart(){if(!hfOn||document.hidden||hfRec||rec||pttRetry)return;requestWakeLock();
   if(navigator.onLine===false){hfShow('Waiting for signal…','No internet – voice will resume automatically');clearTimeout(hfTimer);hfTimer=setTimeout(hfStart,15000);return;}
   var r;try{r=new SR();}catch(e){setHF(false,true);voiceProblem('Could not start voice input.',GBOARD);return;}
-  hfRec=r;r.lang=navigator.language||'en-US';r.continuous=true;r.interimResults=true;r.maxAlternatives=5;var fatal=false,hst=false;
+  hfRec=r;r.lang=srLang();r.continuous=true;r.interimResults=true;r.maxAlternatives=5;var fatal=false,hst=false;
   var hwd=setTimeout(function(){if(hfRec===r&&!hst&&hfOn){hfRec=null;try{r.abort();}catch(e){}hfOther++;hfShow('Reconnecting voice…');hfSchedule();}},5000);
   r.onstart=function(){hst=true;clearTimeout(hwd);if(hfRec!==r)return;hfErrors=0;hfNet=0;hfAud=0;hfOther=0;clearBlock();hfShow('Hands-free listening');};
-  r.onresult=function(e){if(hfRec!==r)return;var tmp='';r._d=r._d||{};for(var i=Math.min(e.resultIndex,e.results.length);i<e.results.length;i++){var t=e.results[i][0].transcript;if(e.results[i].isFinal){hfErrors=0;hfWorked=true;voiceWorked=true;var ft=pickAlt(e.results[i]),nf=norm(ft),pv=r._d[i],lt=(r._lat&&Date.now()-r._lat<4000)?(r._last||''):'';if(!nf)continue;var nw=ft.trim().split(/\s+/),pw=(pv!=null?pv:lt).split(' ').filter(Boolean),grow=pw.length&&nf.split(' ').slice(0,pw.length).join(' ')===pw.join(' ');r._d[i]=nf;r._last=nf;r._lat=Date.now();if(grow&&nf!==pw.join(' ')&&!isCmd(nf,ft)&&!vtJump(nf)){var rest=nw.slice(pw.length).join(' ');if(rest)hfHandle(rest);continue;}hfHandle(ft);}else tmp+=t;}if(tmp)hfShow('Hands-free listening',tmp.trim()+'…');};
+  r.onresult=function(e){if(hfRec!==r)return;var tmp='';r._d=r._d||{};for(var i=Math.min(e.resultIndex,e.results.length);i<e.results.length;i++){var t=e.results[i][0].transcript;if(e.results[i].isFinal){hfErrors=0;hfWorked=true;voiceWorked=true;var ft=pickAlt(e.results[i]),nf=norm(ft),pv=r._d[i],lt=(r._lat&&Date.now()-r._lat<4000)?(r._last||''):'';if(!nf)continue;var nw=ft.trim().split(/\s+/),pw=(pv!=null?pv:lt).split(' ').filter(Boolean),grow=pw.length&&nf.split(' ').slice(0,pw.length).join(' ')===pw.join(' ');r._d[i]=nf;r._last=nf;r._lat=Date.now();if(grow&&nf!==pw.join(' ')&&!isCmd(nf,ft)&&!vtJump(nf)){var rest=nw.slice(pw.length).join(' ');if(rest)hfHandle(rest);continue;}hfHandle(ft);}else tmp+=t;}r._tmp=tmp.trim();if(tmp)hfShow('Hands-free listening',tmp.trim()+'…');};
   r.onerror=function(e){if(hfRec!==r)return;var er=e.error;
     if(er==='not-allowed'||er==='service-not-allowed'){if(!hfWorked&&!voiceWorked){fatal=true;clearTimeout(hwd);micBlocked(er);return;}permDenied(function(){if(hfOn)micBlocked('denied');});hfOther++;hfShow('Reconnecting voice…');return;}
-    if(er==='language-not-supported'){fatal=true;setHF(false,true);voiceProblem(VERR[er],GBOARD);return;}
+    if(er==='language-not-supported'&&srLangNext()){hfShow('Reconnecting voice…');return;}if(er==='language-not-supported'){fatal=true;setHF(false,true);voiceProblem(VERR[er],GBOARD);return;}
     if(er==='audio-capture'){hfAud++;if(hfAud>=5){fatal=true;setHF(false,true);voiceProblem(VERR[er],GBOARD);return;}hfShow('Reconnecting voice…');return;}
     if(er==='network'){hfNet++;hfShow('Waiting for signal…','Voice will resume automatically');return;}
     if(er==='no-speech'||er==='aborted')return;hfOther++;hfShow('Reconnecting voice…',VERR[er]||er);};
-  r.onend=function(){clearTimeout(hwd);if(hfRec!==r)return;hfRec=null;if(fatal||!hfOn)return;hfSchedule();};
+  r.onend=function(){clearTimeout(hwd);if(hfRec!==r)return;hfRec=null;if(r._tmp&&hfOn&&(route.name==='form'||route.name==='addHive')&&activeTextEl()){var it=fixVocab(r._tmp);r._tmp='';if(!isCmd(norm(it),it))try{hfHandle(it);}catch(e){}}if(fatal||!hfOn)return;hfSchedule();};
   try{r.start();}catch(e){clearTimeout(hwd);hfRec=null;hfOther++;hfShow('Reconnecting voice…');hfSchedule();}}
 addEventListener('offline',function(){if(hfOn){hfStop();hfShow('Waiting for signal…','No internet – voice will resume automatically');}});
 addEventListener('online',function(){if(hfOn){hfNet=0;hfStop();hfStart();}});
