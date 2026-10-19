@@ -206,6 +206,7 @@ html.standalone .instOnly{display:none!important}
 .rtoast .undo{min-height:44px;padding:6px 14px;background:var(--amber);color:var(--amberInk);border-color:var(--amber)}
 .vt-on{box-shadow:0 0 0 3px var(--amber),0 0 16px 4px rgba(255,182,39,.55)!important;border-radius:12px}.vtTag{display:inline-block;margin-left:8px;font-size:.7rem;font-weight:800;line-height:1.3;color:#1a1408;background:var(--amber);padding:0 7px;border-radius:999px;vertical-align:middle;animation:vtp 1.6s ease-in-out infinite}@keyframes vtp{50%{opacity:.6}}.step,#hiveForm{padding:5px 6px}
 .pgrid{display:grid!important;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:4px}.pgrid button{min-height:34px!important;height:auto;padding:2px 3px!important;font-size:.76rem!important;line-height:1.05;border-radius:9px;flex:none}.pgrid button[aria-pressed=true]{background:var(--amber);color:var(--amberInk);border-color:var(--amber)}.glab{display:flex;align-items:center;gap:8px}.gmic{min-height:34px!important;width:42px;padding:0!important}.legacy{font-size:.8rem;margin:4px 0 0;opacity:.85}
+.step.gstep:not([hidden]){display:flex;flex-direction:column;overflow:hidden}.step.gstep .pgrid{flex:1;min-height:0;grid-template-columns:repeat(3,minmax(0,1fr))!important;grid-auto-rows:minmax(0,1fr);gap:3px!important}.step.gstep .pgrid button{min-height:0!important;height:auto;font-size:clamp(.62rem,3.1vw,.8rem)!important;padding:1px 4px!important;line-height:1.08;text-align:left;justify-content:flex-start;overflow:hidden;overflow-wrap:break-word;border-radius:8px}.pgrid .gn{font-weight:800;margin-right:1px}.step.gstep .pgrid button.glong{font-size:clamp(.56rem,2.7vw,.72rem)!important;letter-spacing:-.2px;line-height:1.02}.step.gstep .hint{margin-top:4px;font-size:.74rem}.step.gstep .glab{margin:0 0 2px}.step.gstep .glab .gmic{min-height:30px!important}
 </style>
 </head>
 <body>
@@ -335,7 +336,7 @@ function seg(field,opts,labels){return '<div class="seg" role="group">'+opts.map
 function tf(id,ph,ta){return '<label for="f_'+id+'">'+TEXTF[id]+'</label><div class="fr">'+(ta?'<textarea id="f_'+id+'" data-f="'+id+'" placeholder="'+ph+'">'+esc(draft[id])+'</textarea>':'<input id="f_'+id+'" data-f="'+id+'" placeholder="'+ph+'" value="'+esc(draft[id])+'">')+micFor('f_'+id)+'</div>';}
 var STEPS=['Date & strength','Degrees Celsius','Queen','Brood','Honey stores','Pests','Treatments','Notes','Photos'],LASTSTEP=STEPS.length-1;
 var FSTEP={date:0,strength:0,weather:1,queenSeen:2,brood:3,honey:4,pests:5,treatments:6,notes:7,photos:8};
-function stp(k,html,hint){return '<div class="step" data-step="'+k+'"'+(k?' hidden':'')+'>'+html+'<p class="hint">'+(hint||'Say an option, or &ldquo;next&rdquo; / &ldquo;back&rdquo;.')+'</p></div>';}
+function stp(k,html,hint){return '<div class="step'+(k===5||k===6?' gstep':'')+'" data-step="'+k+'"'+(k?' hidden':'')+'>'+html+'<p class="hint">'+(hint||'Say an option, or &ldquo;next&rdquo; / &ldquo;back&rdquo;.')+'</p></div>';}
 function vForm(){var h=hive(route.id);
   return '<h1>'+esc(h.name)+' &middot; inspection</h1><div class="prog"><span id="progTxt"></span><span class="dots">'+STEPS.map(function(){return '<i></i>';}).join('')+'</span></div><form id="inspForm" class="screen" style="animation:none">'+
   stp(0,'<label for="f_date">Date</label><input type="date" id="f_date" data-f="date" value="'+esc(draft.date)+'"><div class="lbl">Colony strength</div>'+seg('strength',['weak','medium','strong']),'Say &ldquo;strong&rdquo;, &ldquo;medium&rdquo; or &ldquo;weak&rdquo;.')+
@@ -343,8 +344,8 @@ function vForm(){var h=hive(route.id);
   stp(2,'<div class="lbl">Queen seen?</div>'+seg('queenSeen',['yes','no'],['Yes, seen','Not seen']),'Say &ldquo;queen seen&rdquo; or &ldquo;not seen&rdquo;.')+
   stp(3,'<div class="lbl">Brood pattern</div>'+seg('brood',BROOD,['Solid','Spotty','Patchy','None']),'Say &ldquo;solid&rdquo;, &ldquo;spotty&rdquo;, &ldquo;patchy&rdquo; or &ldquo;none&rdquo;.')+
   stp(4,'<div class="lbl">Honey stores</div>'+seg('honey',HONEY),'Say &ldquo;honey low/medium/good/full&rdquo;.')+
-  stp(5,gridHtml('pests'),'Say pest names, e.g. &ldquo;varroa and wax moth&rdquo;, or &ldquo;none seen&rdquo;. Tap to toggle.')+
-  stp(6,gridHtml('treatments'),'Say products, e.g. &ldquo;oxalic acid&rdquo;, or &ldquo;none&rdquo;. Doses go in Notes.')+
+  stp(5,gridHtml('pests'),'Say numbers, e.g. &ldquo;1 and 3&rdquo;, &ldquo;not 3&rdquo;. Tap to toggle.')+
+  stp(6,gridHtml('treatments'),'Say numbers, e.g. &ldquo;2 and 5&rdquo;. Doses go in Notes.')+
   stp(7,tf('notes','Anything else…',1),'Just speak, or say &ldquo;restart&rdquo; to clear.')+
   stp(8,'<div class="lbl">Photos</div><div id="thumbs">'+thumbsHtml(draft.photos,true)+'</div><button type="button" class="primary" data-act="camOpen" data-say="open camera|open the camera|camera" style="margin-top:8px;width:100%">&#128247; Open camera</button><label class="btn" for="f_photos" data-say="pick photos|choose photos|add photos|gallery" style="margin-top:8px;width:100%;color:var(--text)">&#128193; Pick photos (tap)</label><input id="f_photos" type="file" accept="image/*" capture="environment" multiple hidden><div id="busy" class="busy" hidden>Processing photos…</div>','Say &ldquo;open camera&rdquo;, &ldquo;take a photo&rdquo;, or &ldquo;finish&rdquo;.')+
   '<div class="bar"><button type="button" id="delDraftBtn" class="danger delDraft" data-act="delDraft" data-say="delete inspection|delete this inspection|delete" aria-label="Delete inspection" title="Delete inspection">&#128465;</button><button type="button" id="prevBtn" data-act="prev">Cancel</button><button type="button" id="saveDraftBtn" class="saveDraft" data-act="saveDraft" data-say="save draft" aria-label="Save draft">&#128190; Save</button><button type="button" id="nextBtn" class="primary" data-act="next">Next &rsaquo;</button></div></form>';}
@@ -710,7 +711,7 @@ var TEMP_RE=/-?\d+(?:[.,]\d+)?°[CF]/;
 function isTempPhrase(t){if(!TEMP_RE.test(t))return false;var rest=norm(t.replace(/-?\d+(?:[.,]\d+)?°[CF]/g,' ')).split(' ').filter(Boolean);return rest.every(function(x){return /^(it|its|it s|s|is|was|about|around|roughly|and|a|bit|today|outside|weather|temperature|temp|now|the|very|quite|but|with|degrees?)$/.test(x)||WEATHER.indexOf(x)>=0;});}
 var VOCAB=['varroa','brood','queen','cells','super','hive','tool','capped','beetle','nectar','foundation','swarm','drone','larvae','eggs','honey','stores','strength','strong','weak','medium','solid','spotty','patchy','weather','pests','notes','treatments','next','back','save','done','home','photo','sunny','cloudy','windy','calm','rainy','mites','seen','frames','comb'];
 function vocabScore(t){var w=norm(t).split(' '),s=0;w.forEach(function(x){if(VOCAB.indexOf(x)>=0)s+=1;});if(isCmd(norm(t)))s+=3;if(TEMP_RE.test(t))s+=10;return s;}
-function pickAlt(res){var ph,best=null,bs=-1,w0=res.length?norm(res[0].transcript).split(' ').length:0;for(var i=0;i<res.length;i++){var raw=res[i].transcript,f=fixVocab(raw),wn=norm(f).split(' ').length,ph=pestHits(pestFix(f,false)),sc=vocabScore(f)-i*0.5+(f!==raw?0.2:0)-(wn<w0*0.8&&!ph?3:0)+2*ph;if(sc>bs){bs=sc;best=f;}}return best==null?'':best;}
+function pickAlt(res){var ph,best=null,bs=-1,w0=res.length?norm(res[0].transcript).split(' ').length:0;for(var i=0;i<res.length;i++){var raw=res[i].transcript,f=fixVocab(raw),wn=norm(f).split(' ').length,ph=pestHits(pestFix(f,false)),sc=(route.name==='form'&&GRID[actT]&&numParse(raw,gLabels(actT).length)?6:0)+vocabScore(f)-i*0.5+(f!==raw?0.2:0)-(wn<w0*0.8&&!ph?3:0)+2*ph;if(sc>bs){bs=sc;best=f;}}return best==null?'':best;}
 var FIELDKW=/^(weather|pests?|disease|treatments?|treated|notes?|comment|date)\b/;
 function isCmd(n,raw){if(!n)return false;if(READ_RE.test(n))return true;if(raw&&isTempPhrase(raw))return true;if(/^undo\b|\bundo$/.test(n))return true;if(/^((start|begin|end|finish|stop) (an |the |a |this )?(apiary )?round|next hive|skip( hive)?|(continue|resume) round)$/.test(n))return true;if(CAM_OPEN.test(n)||CAM_SNAP.test(n)||/^((switch|flip|other|back|rear|hive|front|selfie) camera)$/.test(n))return true;if(/^(undo|scroll (up|down)|page (up|down)|(next|previous|prev) page|show numbers|hide numbers|(press|number|button|tap) \d+)$/.test(n))return true;
   if(/^(next|continue|back|previous|go back|save|done|finish|cancel|stop|go home|home|open home|photo|photos|take a? ?photo|add photos?|picture|camera|help|undo|undo last)( inspection| please)?$/.test(n))return true;
@@ -742,7 +743,7 @@ function sbGo(){var text=sbQ.join('. ').replace(/\+/g,' plus ').replace(/−/g,'
 function segLabel(f,v){var b=app.querySelector('[data-act=seg][data-f="'+f+'"][data-v="'+v+'"]');return b?b.textContent.trim():cap(v||'');}
 var READ_RE=/^(read back|read it back|read them back|read that back|read out|read it out|read selections?|read selection|what s selected|whats selected|what is selected|what have i (selected|picked|chosen|got)|what did i (select|pick|choose)|what s picked|repeat selections?|list (them|selections))$/;
 function readBack(){if(route.name!=='form'||!draft)return 'Open an inspection first';var f=actT||STEPF[draft.step||0],m;
-  if(GRID[f]){var sl=gSel(f),lg=gLegacy(f);m=FNAMES[f]+': '+(sl.length?sl.join(', '):'nothing selected')+(lg.length?'. Earlier text: '+lg.join(', '):'');}
+  if(GRID[f]){var sl=gSel(f),lg=gLegacy(f);m=FNAMES[f]+': '+(sl.length?sl.map(function(v){return gLabelN(f,v);}).join('. '):'nothing selected')+(lg.length?'. Earlier text: '+lg.join(', '):'');}
   else if(f==='weather')m='Weather: '+(draft.weather||'nothing selected');
   else if(f==='notes'){var nt=draft.notes||'';m='Notes: '+(nt?(nt.length>220?nt.slice(0,220)+'…':nt):'empty');}
   else if(f==='date')m='Date: '+(draft.date||'not set');
@@ -753,7 +754,7 @@ function readBack(){if(route.name!=='form'||!draft)return 'Open an inspection fi
 /* undo on choice steps: reverse the last selection action (a whole spoken batch at once), step by step */
 function choiceUndo(f){if(!fhHas(f))return 'Nothing to undo on '+FNAMES[f];
   if(GRID[f]){var b0=gSel(f);fhUndo(f);var a0=gSel(f),gone=b0.filter(function(x){return a0.indexOf(x)<0;}),back=a0.filter(function(x){return b0.indexOf(x)<0;});
-    var m='Undid '+(gone.length?gone.join(', '):'')+(back.length?(gone.length?'; ':'')+'put back '+back.join(', '):'')+(gone.length||back.length?'':'last change');sayBack(m);return FNAMES[f]+': '+m;}
+    var nm=function(a){return a.map(function(v){return gLabelN(f,v);}).join('. ');};var m='Undid '+(gone.length?nm(gone):'')+(back.length?(gone.length?'; ':'')+'put back '+nm(back):'')+(gone.length||back.length?'':'last change');sayBack(m);return FNAMES[f]+': '+m;}
   var o=draft[f]||'';fhUndo(f);var nv=draft[f]||'',m2;
   if(f==='weather')m2='Weather: undid – now '+(nv||'nothing selected');else m2=FNAMES[f]+': undid '+(o?segLabel(f,o):'')+(nv?' – back to '+segLabel(f,nv):'');
   sayBack(m2.replace(/ – /g,', '));return m2;}
@@ -811,7 +812,7 @@ function gToggle(f,v,on){var G=GRID[f],sel=gSel(f),has=sel.indexOf(v)>=0;if(on==
   return gSet(f,sel,FNAMES[f]+(on?' + ':' − ')+v);}
 function gClear(f){if(!gSel(f).length&&!gLegacy(f).length)return false;var old=draft[f]||'';draftU(f,old,FNAMES[f]+' cleared');draft[f]='';draft[f+'L']=[];gSync(f);try{storeDraft();render();}catch(e){}return true;}
 /* speech -> buttons on a grid (no typing) */
-function gridVoice(f,t){var G=GRID[f];t=fixVocab(String(t||''));if(f==='pests')t=pestFix(t,true);var n=norm(t).replace(/^(add|select|tick|pick|also|and|plus|we have|we saw|i saw|saw|seen|there are|there is|found|some)\s+/,'').replace(/\s+(seen|found|present|spotted|today|please)$/,'');
+function gridNames(f,t){var G=GRID[f];t=fixVocab(String(t||''));if(f==='pests')t=pestFix(t,true);var n=norm(t).replace(/^(add|select|tick|pick|also|and|plus|we have|we saw|i saw|saw|seen|there are|there is|found|some)\s+/,'').replace(/\s+(seen|found|present|spotted|today|please)$/,'');
   if(!n)return null;
   if(RESTART_RE.test(n)||/^(clear all|clear them|clear everything|untick all|none of them)$/.test(n)){var gc=gClear(f);sayBack(gc?FNAMES[f]+' cleared':'Nothing selected');return gc?FNAMES[f]+': all cleared':FNAMES[f]+': nothing selected';}
   if(G.noneRe.test(n)){gToggle(f,G.none,true);sayBack(G.none);return FNAMES[f]+': '+G.none;}
@@ -819,13 +820,39 @@ function gridVoice(f,t){var G=GRID[f];t=fixVocab(String(t||''));if(f==='pests')t
   if(!hs.length)return null;var names=[];hs.forEach(function(h){var v=G.B[h.b][0];if(names.indexOf(v)<0)names.push(v);});
   var sel=gSel(f),before=sel.slice();names.forEach(function(v){if(rm)sel=sel.filter(function(x){return x!==v;});else{if(v===G.none)sel=[];else sel=sel.filter(function(x){return x!==G.none;});if(sel.indexOf(v)<0)sel.push(v);}});
   var ch=gSet(f,sel,FNAMES[f]+(rm?' − ':' + ')+names.join(', '));sayBack(ch?(rm?'Removed ':'')+names.join(', '):(rm?'Not selected: ':'Already selected: ')+names.join(', '));return FNAMES[f]+(rm?' − ':': ')+names.join(', ');}
+
+/* v32: numbers only on the Pests / Treatments pages */
+var GN_W={one:1,won:1,wan:1,juan:1,first:1,two:2,to:2,too:2,tu:2,second:2,three:3,tree:3,free:3,thee:3,third:3,four:4,for:4,fore:4,far:4,fourth:4,five:5,fife:5,fiver:5,fifth:5,six:6,sicks:6,sex:6,sick:6,seeks:6,sixth:6,seven:7,seventh:7,eight:8,ate:8,eat:8,ait:8,eighth:8,nine:9,nein:9,mine:9,ninth:9,ten:10,then:10,tin:10,tan:10,den:10,tenth:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19,twenty:20,plenty:20};
+var GN_SKIP=/^(number|numbers|num|no\.|and|plus|also|add|select|tick|pick|please|um|uh|er|with|n|nr|the|a|an|is|okay|ok)$/;
+var GN_RM=/^(not|remove|no|delete|unselect|deselect|untick|minus|cancel|un|without|drop)$/;
+function gnSplit(d,max){d=String(d);if(+d>=1&&+d<=24)return [+d];max=24;var out=[],i=0;while(i<d.length){var two=+d.substr(i,2),one=+d.charAt(i);if(d.length-i>=2&&two>=10&&two<=max&&!(d.length-i===3&&+d.substr(i+1,2)>=10&&+d.substr(i+1,2)<=max&&one>=1&&false)){out.push(two);i+=2;}else if(one>=1){out.push(one);i+=1;}else return null;}return out;}
+function numParse(t,max){var w=String(t||'').toLowerCase().replace(/number\s*(\d)/g,'number $1').replace(/[#.,;:!?&+()"“”]/g,' ').replace(/(\d)\s*-\s*(\d)/g,'$1 $2').replace(/-/g,' ').split(/\s+/).filter(Boolean);
+  if(!w.length)return null;var rm=false;if(GN_RM.test(w[0])||(w[0]==='take'&&/^(off|away|out)$/.test(w[1]||''))){rm=true;w=w.slice(w[0]==='take'?2:1);}
+  var nums=[],bad=[];for(var i=0;i<w.length;i++){var x=w[i];if(GN_SKIP.test(x))continue;var v=null;
+    if(/^\d+$/.test(x)){var sp=gnSplit(x,max);if(!sp){bad.push(x);continue;}nums=nums.concat(sp);continue;}
+    if(GN_W.hasOwnProperty(x)){v=GN_W[x];if(v===20&&i+1<w.length&&GN_W.hasOwnProperty(w[i+1])&&GN_W[w[i+1]]<10){v+=GN_W[w[i+1]];i++;}nums.push(v);continue;}
+    var m=x.match(/^(\d+)(st|nd|rd|th)$/);if(m){nums.push(+m[1]);continue;}
+    return null;}
+  if(!nums.length)return bad.length?{rm:rm,nums:[],bad:bad}:null;return {rm:rm,nums:nums,bad:bad};}
+function gLabelN(f,v){var i=gLabels(f).indexOf(v);return (i+1)+', '+v;}
+function gridVoice(f,t){var G=GRID[f],L=gLabels(f),raw=String(t||'');var n0=norm(raw);if(!n0)return null;
+  if(RESTART_RE.test(n0)||/^(clear all|clear them|clear everything|untick all|none of them)$/.test(n0)){var gc=gClear(f);sayBack(gc?FNAMES[f]+' cleared':'Nothing selected');return gc?FNAMES[f]+': all cleared':FNAMES[f]+': nothing selected';}
+  var P=numParse(raw,L.length);if(!P)return null;
+  var out=P.nums.filter(function(k){return k<1||k>L.length;});var ok=P.nums.filter(function(k){return k>=1&&k<=L.length;}).filter(function(k,i,a){return a.indexOf(k)===i;});
+  if(!ok.length){var msg='Say a number from 1 to '+L.length;sayBack(msg);return FNAMES[f]+': '+msg;}
+  var sel=gSel(f),added=[],removed=[];ok.forEach(function(k){var v=L[k-1],has=sel.indexOf(v)>=0;
+    if(P.rm||has){if(has){sel=sel.filter(function(x){return x!==v;});removed.push(k);}}
+    else{if(v===G.none)sel=[];else sel=sel.filter(function(x){return x!==G.none;});sel.push(v);added.push(k);}});
+  var ch=gSet(f,sel,FNAMES[f]+': '+ok.join(' and '));
+  var sp=added.map(function(k){return k+', '+L[k-1];}).concat(removed.map(function(k){return 'Removed '+k+', '+L[k-1];}));
+  sayBack(ch?sp.join('. '):'No change');return FNAMES[f]+': '+(sp.join('; ')||'no change')+(out.length?' (no number '+out.join(', ')+')':'');}
 function gridHtml(f){var G=GRID[f],sel=gSel(f),lg=gLegacy(f);
-  return '<label class="glab">'+FNAMES[f]+' <button type="button" class="mic gmic" data-act="gdict" data-f="'+f+'" aria-label="Speak '+FNAMES[f]+'">&#127908;</button></label><div class="seg pgrid" role="group" id="g_'+f+'">'+gLabels(f).map(function(v){return '<button type="button" data-act="pg" data-f="'+f+'" data-v="'+esc(v)+'" aria-pressed="'+(sel.indexOf(v)>=0)+'">'+esc(v)+'</button>';}).join('')+'</div>'+(lg.length?'<p class="legacy">Earlier text (kept): '+esc(lg.join(', '))+'</p>':'');}
-function gridDictate(f){var g=document.getElementById('g_'+f);if(!g)return;var done=function(t){var r=gridVoice(f,t);toast(r?'Heard “'+t+'” → '+r:'Heard “'+t+'” – no '+(f==='pests'?'pest':'treatment')+' name matched. Read a button aloud.',!r);};
-  if(hfOn){toast('Hands-free is on – just say the names, e.g. “varroa and wax moth”.');return;}
+  return '<label class="glab">'+FNAMES[f]+' <button type="button" class="mic gmic" data-act="gdict" data-f="'+f+'" aria-label="Speak '+FNAMES[f]+'">&#127908;</button></label><div class="seg pgrid pg'+f+'" role="group" id="g_'+f+'">'+gLabels(f).map(function(v,i){return '<button type="button" data-act="pg" data-f="'+f+'" data-v="'+esc(v)+'" data-say="'+(i+1)+'"'+(v.length>17?' class="glong"':'')+' aria-pressed="'+(sel.indexOf(v)>=0)+'"><b class="gn">'+(i+1)+'.</b> '+esc(v)+'</button>';}).join('')+'</div>'+(lg.length?'<p class="legacy">Earlier text (kept): '+esc(lg.join(', '))+'</p>':'');}
+function gridDictate(f){var g=document.getElementById('g_'+f);if(!g)return;var done=function(t){var r=gridVoice(f,t);toast(r?'Heard “'+t+'” → '+r:'Heard “'+t+'” – say the numbers, e.g. “2 and 7”.',!r);};
+  if(hfOn){toast('Hands-free is on – just say the numbers, e.g. “2 and 7”.');return;}
   if(msUse()){msDictate(g,done);return;}if(navigator.onLine===false&&!msHave()){toast('Offline dictation not downloaded – see Help',true);return;}
   if(rec){stopListen();setTimeout(function(){gridDictate(f);},350);return;}
-  listen('Say '+(f==='pests'?'pest':'treatment')+' names, e.g. '+(f==='pests'?'“varroa and wax moth”':'“oxalic acid”'),done,app.querySelector('.gmic[data-f="'+f+'"]'));}
+  listen('Say numbers, e.g. “2 and 7”',done,app.querySelector('.gmic[data-f="'+f+'"]'));}
 var vIns={};
 function vWords(x){return norm(x).split(' ').filter(Boolean);}
 function vTidy(t,prev){t=t.replace(/\s*\b(full stop|period)\b/gi,'.').replace(/\s*\bcomma\b/gi,',').replace(/\s*\bquestion mark\b/gi,'?').replace(/\s*\b(exclamation mark)\b/gi,'!').replace(/\s*\b(new line|next line|new paragraph)\b\s*/gi,'\n').replace(/\bi\b/g,'I').replace(/([.!?]\s+|\n)([a-z])/g,function(m,a,b){return a+b.toUpperCase();});if(!/\S/.test(prev||'')||/[.!?\n]\s*$/.test(prev||''))t=t.replace(/^\s*([a-z])/,function(m,a){return a.toUpperCase();});return t;}
@@ -946,7 +973,7 @@ function command(text){text=fixVocab(text);var t=norm(text),w=t.split(' ');
     for(var f in fields){var kw=fields[f].filter(function(k){return w[0]===k||sim(w[0],k)>=0.8;})[0];if(kw&&!(f==='weather'&&w.length>1&&WEATHER.some(function(x){return t.indexOf(x)>=0;})&&false)){
       var keepAll=false;var restT=keepAll?text.trim():text.trim().split(/\s+/).slice(1).join(' ').replace(/^(is|are|was|were|:)\s+/i,'');actT=f;setStep(FSTEP[f]);var el=document.getElementById('f_'+f);
       if(f==='date')return 'Date field';
-      if(GRID[f]){applyVT();if(restT){var gr0=gridVoice(f,restT);return gr0||FNAMES[f]+': no match for “'+restT+'” – read a button aloud';}return FNAMES[f]+': say the names';}
+      if(GRID[f]){applyVT();if(restT){var gr0=gridVoice(f,restT)||gridNames(f,restT);return gr0||FNAMES[f]+': no match for “'+restT+'” – read a button aloud';}return FNAMES[f]+': say the names';}
       if(restT){voiceInsert(el,restT);return TEXTF[f]+': “'+restT+'”';}
       setTimeout(function(){dictateInto(el);},300);return TEXTF[f]+': speak now';}}
     if(has(/^(done|finish|save inspection|finish inspection)$/)){submitInsp();return 'Finished – inspection saved';}
@@ -956,7 +983,7 @@ function command(text){text=fixVocab(text);var t=norm(text),w=t.split(' ');
     if(has(/^(back|previous|go back)$/)){setStep((draft.step||0)-1);return 'Back → step '+((draft.step||0)+1)+' '+STEPS[draft.step||0];}
     if(has(/\b(photo|photos|picture|camera)\b/)){return openCamera(/\b(take|snap|capture)\b/.test(t));}
     var tm=text.match(new RegExp(TEMP_RE.source,'g'));if(tm){tm.forEach(function(x){addWeather(x.toUpperCase().replace('°C','°C'));});wxLockOn();did.push('Weather: '+tm.join(', '));t=norm(text.replace(/-?\d+(?:[.,]\d+)?°[CF]/g,' '));w=t.split(' ');}
-    var pmh=termFind(PEST_B,pestFix(text,false),0.9,false);if(pmh.length){var pn=[];pmh.forEach(function(h){var v=PEST_B[h.b][0];if(pn.indexOf(v)<0){pn.push(v);gToggle('pests',v,true);}});actT='pests';setStep(FSTEP.pests);applyVT();return FNAMES.pests+': '+pn.join(', ');}
+    var pmh=GRID[actT]?[]:termFind(PEST_B,pestFix(text,false),0.9,false);if(pmh.length){var pn=[];pmh.forEach(function(h){var v=PEST_B[h.b][0];if(pn.indexOf(v)<0){pn.push(v);gToggle('pests',v,true);}});actT='pests';setStep(FSTEP.pests);applyVT();return FNAMES.pests+': '+pn.join(', ');}
     var honeyCtx=has(/\b(honey|stores|store|stored|food|nectar)\b/),broodCtx=has(/\bbrood\b/);var qcells=has(/\bqueen cells?\b/);
     if(has(/\bqueen\b/)&&!qcells){if(has(/\b(no|not|didn t|didnt|missing|none|without|never)\b/)){setSeg('queenSeen','no');did.push('Queen: Not seen');}else{setSeg('queenSeen','yes');did.push('Queen: Yes, seen');}}
     if(broodCtx){var bo=BROOD.filter(function(o){return wordHit(w,o.split(' ')[0]);})[0];if(bo){setSeg('brood',bo);did.push('Brood: '+cap(bo));}}
@@ -1194,7 +1221,7 @@ function btnLabel(b){var l=(b.getAttribute('aria-label')||'');var tx=(b.textCont
 function btnSays(b){var a=[btnLabel(b)];var al=b.getAttribute('aria-label');if(al)a.push(norm(al));if(b.dataset.say)b.dataset.say.split('|').forEach(function(x){a.push(norm(x));});return a.filter(Boolean);}
 function topLayer(){var c=document.querySelector('.confirmOv');if(c)return c;if(cam)return cam.ov;var ps=document.querySelectorAll('.pdfOv');if(ps.length)return ps[ps.length-1];var os=document.querySelectorAll('.overlay');return os.length?os[os.length-1]:null;}
 function hitOk(b){var r=b.getBoundingClientRect();if(r.width<4||r.height<4)return false;var x=r.left+r.width/2,y=r.top+Math.min(r.height/2,r.height-3);if(y<0||y>innerHeight||x<0||x>innerWidth)return false;var e=document.elementFromPoint(x,y);return !!e&&(e===b||b.contains(e)||(b.tagName==='LABEL'&&e===b));}
-function voiceButtons(){var L=topLayer(),root=L||document;var list=[].slice.call(root.querySelectorAll('button,label.btn')).filter(function(b){return b.id!=='micBtn'&&b.id!=='hfBtn'&&!b.disabled&&b.getAttribute('aria-disabled')!=='true'&&hitOk(b);});
+function voiceButtons(){var L=topLayer(),root=L||document;var list=[].slice.call(root.querySelectorAll('button,label.btn')).filter(function(b){return b.dataset.act!=='pg'&&b.id!=='micBtn'&&b.id!=='hfBtn'&&!b.disabled&&b.getAttribute('aria-disabled')!=='true'&&hitOk(b);});
   if(L&&!L.classList.contains('confirmOv')&&L.classList.contains('overlay')){}return list;}
 function matchButton(n,min){if(!n)return null;var best=null,bs=0;voiceButtons().forEach(function(b){btnSays(b).forEach(function(k){var dn=(n.match(/\d+/g)||[]).join(','),dk=(k.match(/\d+/g)||[]).join(',');if(dn&&dk!==dn)return;var sc=k===n?1:sim(n,k);if(sc>bs){bs=sc;best=b;}});});return bs>=(min||0.8)?best:null;}
 function pressBtn(b){var lab=(b.dataset.say&&b.classList.contains('tap')?b.dataset.say.split('|')[0]:(b.textContent||b.getAttribute('aria-label')||'')).replace(/[^\p{L}\p{N}\s,'’.\/-]/gu,' ').replace(/\s+/g,' ').trim()||'button';b.click();return 'Pressed “'+lab+'”';}
@@ -1297,7 +1324,7 @@ app.addEventListener('click',function(e){var b=e.target.closest('[data-act]');if
   else if(a==='pdfAll')exportPdf(state.hives,'All hives');
   else if(a==='pdfHive'){var hp=hive(route.id);if(hp)exportPdf([hp],hp.name);}
   else if(a==='wx')wxToggle(b.dataset.v);
-  else if(a==='pg'){actT=b.dataset.f;var wasOn=gSel(b.dataset.f).indexOf(b.dataset.v)>=0;if(gToggle(b.dataset.f,b.dataset.v))sayBack((wasOn?'Removed ':'')+b.dataset.v);applyVT();}
+  else if(a==='pg'){actT=b.dataset.f;var wasOn=gSel(b.dataset.f).indexOf(b.dataset.v)>=0;if(gToggle(b.dataset.f,b.dataset.v))sayBack((wasOn?'Removed ':'')+gLabelN(b.dataset.f,b.dataset.v));applyVT();}
   else if(a==='gdict'){actT=b.dataset.f;applyVT();gridDictate(b.dataset.f);}
   else if(a==='seg'){var f=b.dataset.f;actT=f;setSeg(f,draft[f]===b.dataset.v?'':b.dataset.v);}
   else if(a==='camOpen')openCamera(false);
