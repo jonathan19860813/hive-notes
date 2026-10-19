@@ -562,7 +562,7 @@ var FIXES=[
  [/\b(drone comb|drawn comb)\b/gi,function(m){return m.toLowerCase();}],
  [/\b(brood box|broad box|brewed box)\b/gi,'brood box'],
  /* v27 pests & treatments (distinctive mishearings only – safe anywhere) */
- [/\b(vera|veroa|varoa|barrow|bar row|for roar|far roar|very|vero)\s+(mites?|mite count|counts?|loads?|levels?|treatments?|destructor|drop|infestation)\b/gi,function(m,a,b){return 'varroa '+b.toLowerCase();}],
+ [/(?<!wheel\s?)\b(vera|veroa|varoa|barrow|bar row|for roar|far roar|very|vero)\s+(mites?|mite count|counts?|loads?|levels?|treatments?|destructor|drop|infestation)\b/gi,function(m,a,b){return 'varroa '+b.toLowerCase();}],
  [/\bfor roar\b/gi,'varroa'],
  [/\bvarroa\s+(destroyer|destruct her|the structure)\b/gi,'Varroa destructor'],
  [/\b(trachea|tracheal|track eel|tray kill)\s+(mites?|mights)\b/gi,function(m,a,b){return 'tracheal '+b.toLowerCase().replace('mights','mites');}],
@@ -626,10 +626,63 @@ var FIXES=[
 ];
 /* context-aware pest words: 'best/past/pass/paste…' -> pest(s) only when it makes beekeeping sense */
 var PEST_MIS='(?:pest|pests|past|paste|pastes|best|bests|pass|passed|pets)';
-function pestFix(t,inPests){var P=PEST_MIS,pl=function(w){return /s$|ed$/i.test(w)&&!/^pass$/i.test(w)?'pests':'pest';};
- t=t.replace(new RegExp('\\b(no|any|some|few|several|lots of|signs of|evidence of|sign of|check(?:ed)? for|looked for|looking for)\\s+'+P+'(?=\\s+(?:seen|found|present|spotted|noticed|observed|today|visible|activity|\\.|,|$))','gi'),function(m,a){return a+' pests';});
- t=t.replace(new RegExp('\\b('+P+')(?=\\s+(?:check|checks|control|inspection|pressure|count|counts|monitoring|free|activity)\\b)','gi'),function(m,a){return pl(a);});
- if(inPests)t=t.replace(new RegExp('\\b('+P+')(?=\\s+(?:management|problems?|issues?|levels?|load|treatment|damage|seen|found)\\b)','gi'),function(m,a){return pl(a);});
+
+/* v28: extra pest/treatment fixes from real Moonshine output; only applied to dictated box text (never commands). s='all' or 'box' (Pests/Treatments only) */
+var SEPF="[\\s,.;:\\-]+(?:(?:the|a|an|of|uh|um|er|some|any)[\\s,.;:\\-]+){0,2}";
+var PFX=[
+ [/\b(varroa)[\s,.;:\-]+(disruptor|distractor|destroyer|destruct her|the structure)\b/gi,function(m,a){return (/^V/.test(a)?'V':'v')+'arroa destructor';},'all'],
+ [/\b(varroa|mite)[\s,.;:\-]+accounts?\b/gi,function(m,a){return a+' count';},'all'],
+ [/\b(pests?|mites?|beetles?|varroa|larvae|eggs|Tropilaelaps|hornets?|wasps|ants|mice)[\s,.;:\-]+scene\b/gi,function(m,a){return a+' seen';},'all'],
+ [/\bno[\s,.;:\-]+pest[\s,.;:\-]+seen\b/gi,function(m){return (/^N/.test(m)?'N':'n')+'o pests seen';},'all'],
+ [/\b(press|pressed)[\s,.;:\-]+(?:the[\s,.;:\-]+)?check\b/gi,function(m){return (/^P/.test(m)?'P':'p')+'est check';},'box'],
+ [/\bunited[\s-]+rated[\s,.;:\-]+(pest|past|best)[\s,.;:\-]+management\b/gi,'integrated pest management','all'],
+ [/\b(integrated)[\s,.;:\-]+(past|best|pass)[\s,.;:\-]+management\b/gi,function(m,a){return a+' pest management';},'all'],
+ [/\b(track|truck|tracky|truckee)[\s-]*(your|ya|eel|ear|ee)?[\s,.;:\-]+(mites?|minds?|mates|mights)\b/gi,function(m,a,b,c){return 'tracheal mite'+(/s$/i.test(c)?'s':'');},'all'],
+ [/\bsmall[\s,.;:\-]+(hive|high|hi|five)[\s,.;:\-]+(beagles?|beets?|beatles?|beetles?)\b/gi,function(m,a,b){return 'small hive beetle'+(/s$/i.test(b)?'s':'');},'all'],
+ [/\bwax[\s,.;:\-]+(mother|mothers|motherns|moth's|moss|mouth|moths?)\b/gi,function(m,a){return /s$/i.test(a)&&!/moss$/i.test(a)?'wax moths':'wax moth';},'all'],
+ [/\bsack[\s,.;:\-]+(brood|brooding|broad|brewed|brude)\b/gi,'sacbrood','all'],
+ [/\bstone[\s,.;:\-]+(brood|broad|brewed|brude|ruled)\b/gi,'stonebrood','box'],
+ [/\b(american|european)[\s,.;:\-]+(?:foul|fowl|foal|farrel|farl|for|full)[\s-]*(?:brood|brewed|broad|roots?|rude|root)\b/gi,function(m,a){return a.charAt(0).toUpperCase()+a.slice(1).toLowerCase()+' foulbrood';},'all'],
+ [/\b(the|de|re)?[\s-]?formed[\s,.;:\-]+(wing|winged|wings|wink)[\s,.;:\-]+(virus|viruses|fires)\b/gi,'deformed wing virus','all'],
+ [/\b(be|bee)[\s,.;:\-]+(laus|lowes|louse|lice)\b/gi,function(m,a,b){return /lice/i.test(b)?'bee lice':'bee louse';},'all'],
+ [/\basian[\s-]+(borned|born|horned|hornet|hornets|horn it|horn its)\b/gi,function(m,a){return 'Asian hornet'+(/s$/i.test(a)?'s':'');},'all'],
+ [/\bcapebee'?s?\b/gi,function(m){return /s$/i.test(m)?'Cape bees':'Cape bee';},'all'],
+ [/\b(capens this|capancies|cape and cease|cap and sis|capensis)\b/gi,'capensis','all'],
+ [/\b(?:v|b|bee)[\s-]*(?:pyrate|pirate|pirot\w*|pie rate)s?\b/gi,function(m){return /s$/i.test(m)?'bee pirates':'bee pirate';},'all'],
+ [/\bbe[\s-]+wolf\b/gi,'beewolf','all'],
+ [/\blighting[\s,.;:\-]+workers?\b/gi,function(m){return /s$/i.test(m)?'laying workers':'laying worker';},'all'],
+ [/\bmy[\s,.;:\-]+drop(?=[\s,.;:\-]+(?:was|is|of|count|after|\d)\b)/gi,function(m){return (/^M/.test(m)?'M':'m')+'ite drop';},'all'],
+ [/\bmy[\s,.;:\-]+drop\b(?![\s-]+off)/gi,function(m){return (/^M/.test(m)?'M':'m')+'ite drop';},'box'],
+ [/\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten|a few|few|some|no|many)[\s,.;:\-]+miles\b/gi,'$1 mites','box'],
+ [/\b(nice)(?=[\s,.;:\-]+in[\s,.;:\-]+(?:the[\s,.;:\-]+)?(?:brood box|super|hive|roof|box|frames?))/gi,function(m){return /^N/.test(m)?'Mice':'mice';},'box'],
+ [/\brobert[\s,.;:\-]+(being|bees|b's|beings)\b/gi,'robber bees','box'],
+ [/\bscreen(?:ed|s)?[\s-]*(?:part|button|bottom|bottle)[\s,.;:\-]+(?:and[\s,.;:\-]+)?board\b/gi,'screened bottom board','all'],
+ [/\bformic[\s,.;:\-]+pro[\s-]*(strips?|stribs|trips|troops)\b/gi,'Formic Pro strips','all'],
+ [/\bformic[\s-]+pro\b/gi,'Formic Pro','all'],
+ [/\bmight[\s-]+a?wake?[\s-]+(?:wick|quick|wig)[\s-]+strips?\b/gi,'Mite Away Quick Strips','all'],
+ [/\bamitra'?s\b/gi,'amitraz','all'],
+ [/\bhop[\s-]+(dog|guard|god)\b/gi,'HopGuard','all'],
+ [/\bfew[\s-]+(maculate|magellan|magill\w*|maggie lin)\b/gi,'fumagillin','all'],
+ [/\b(tera[\s-]?mise|terra[\s-]?mice|teramise|termimize|terra my sin)\b/gi,'Terramycin','all'],
+ [/\bcheck[\s-]+my[\s-]+(plus|class|plot|strips?)\b/gi,'CheckMite+','box'],
+ [/\b(i'm all|time all|thyme all|tie mall)\b/gi,'thymol','box'],
+ [/\bamerican[\s-]+strips?\b/gi,'MAQS strips','box'],
+ [/\b(Apivar|Apistan|Bayvarol|Tactic|HopGuard|MAQS|Formic Pro|amitraz|Thymovar|Varroa|CheckMite\+?)[\s-]+(trips|stribs|troops|tribes|strip's|stripes|tri|strip)\b/gi,'$1 strips','all']
+];
+function pfxApply(t,box){PFX.forEach(function(f){if(f[2]==='all'||box)t=t.replace(f[0],f[1]);});return t;}
+/* varroa mishearings: tolerant of Moonshine punctuation/capitals and of 1-2 words in between */
+var VAR_MIS="(?:rover's|rovers?|marrowing|marrows?|merlot|roller|the roller|virroa|varoah|rova|roa|vroa|vera|veroa|varoa|verroa|varro|varra|barrow|barroa|bar row|for roar|far roar|for over|vero|virroa|veraa)";
+var VAR_CTX="(?:mites?|mights|mates|count|counts|account|accounts|disruptor|distractor|drop|load|levels?|treatments?|infestation|wash|destructor|check|numbers|strips?|bomb)";
+function varroaFix(t,inPests){var cap=function(w){return /^[A-Z]/.test(w)?'Varroa':'varroa';};
+ t=t.replace(new RegExp('(?<!wheel\\s?)\\b('+VAR_MIS+')(?=[\\s,.;:\\-]+(?:[a-z]+[\\s,.;:\\-]+){0,2}'+VAR_CTX+'\\b)','gi'),cap);
+ t=t.replace(new RegExp('\\b(very)(?=[\\s,.;:\\-]+mites?\\b)','gi'),cap);
+ t=t.replace(new RegExp('\\b((?:treat(?:ed|ing|ment)?|tested|test|checked|check|monitor(?:ed|ing)?|count(?:ed)?|signs?|high|low|heavy)\\s+(?:for|of)\\s+)('+VAR_MIS+')\\b','gi'),function(m,a,v){return a+'varroa';});
+ if(inPests)t=t.replace(new RegExp('(?<!wheel\\s?)\\b'+VAR_MIS+'\\b','gi'),cap);
+ return t;}
+function pestFix(t,inPests){t=pfxApply(t,inPests);t=varroaFix(t,inPests);t=pfxApply(t,inPests);var P=PEST_MIS,pl=function(w){return /s$|ed$/i.test(w)&&!/^pass$/i.test(w)?'pests':'pest';};
+ t=t.replace(new RegExp('\\b(no|any|some|few|several|lots of|signs of|evidence of|sign of|check(?:ed)? for|looked for|looking for)'+SEPF+P+'(?=(?:[\\s,.;:\\-]+(?:[a-z]+[\\s,.;:\\-]+){0,2}(?:seen|found|present|spotted|noticed|observed|today|visible|activity)\\b)|\\s*[.,!]|\\s*$)','gi'),function(m,a){return a+' pests';});
+ t=t.replace(new RegExp('\\b('+P+')(?='+SEPF+'(?:check|checks|control|inspection|pressure|count|counts|monitoring|free|activity)\\b)','gi'),function(m,a){return (/^[A-Z]/.test(a)?'P':'p')+pl(a).slice(1);});
+ if(inPests)t=t.replace(new RegExp('\\b('+P+')(?='+SEPF+'(?:management|problems?|issues?|levels?|load|treatment|damage|seen|found)\\b)','gi'),function(m,a){return (/^[A-Z]/.test(a)?'P':'p')+pl(a).slice(1);});
  t=t.replace(new RegExp('\\b(integrated)\\s+'+P+'\\s+management\\b','gi'),'integrated pest management');
  t=t.replace(new RegExp('\\b'+P+'\\s+(and|or|&)\\s+(disease|diseases)\\b','gi'),function(m,a,b){return 'pests '+a+' '+b;});
  t=t.replace(/\b(mights?|might's)\s+(drop|wash|count|counts|load|levels?|board)\b/gi,function(m,a,b){return 'mite '+b.toLowerCase();});
