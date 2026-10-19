@@ -205,6 +205,7 @@ html.standalone .instOnly{display:none!important}
 .rtoast{display:flex;align-items:center;gap:10px;background:var(--card2);color:var(--text);border:2px solid var(--amber)}
 .rtoast .undo{min-height:44px;padding:6px 14px;background:var(--amber);color:var(--amberInk);border-color:var(--amber)}
 .vt-on{box-shadow:0 0 0 3px var(--amber),0 0 16px 4px rgba(255,182,39,.55)!important;border-radius:12px}.vtTag{display:inline-block;margin-left:8px;font-size:.7rem;font-weight:800;line-height:1.3;color:#1a1408;background:var(--amber);padding:0 7px;border-radius:999px;vertical-align:middle;animation:vtp 1.6s ease-in-out infinite}@keyframes vtp{50%{opacity:.6}}.step,#hiveForm{padding:5px 6px}
+.pgrid{display:grid!important;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:4px}.pgrid button{min-height:34px!important;height:auto;padding:2px 3px!important;font-size:.76rem!important;line-height:1.05;border-radius:9px;flex:none}.pgrid button[aria-pressed=true]{background:var(--amber);color:var(--amberInk);border-color:var(--amber)}.glab{display:flex;align-items:center;gap:8px}.gmic{min-height:34px!important;width:42px;padding:0!important}.legacy{font-size:.8rem;margin:4px 0 0;opacity:.85}
 </style>
 </head>
 <body>
@@ -226,7 +227,7 @@ var state=load(),app=document.getElementById('app'),backBtn=document.getElementB
 var route={name:'home'},draft=null;
 var WEATHER=['sunny','cloudy','overcast','windy','calm','rainy','hot','warm','mild','cool','cold','humid'];
 var BROOD=['solid','spotty','patchy','none seen'],HONEY=['low','medium','good','full'];
-var TEXTF={weather:'Degrees Celsius',pests:'Pests / disease',treatments:'Treatments',notes:'Notes'};
+var TEXTF={weather:'Degrees Celsius',notes:'Notes'};
 
 function load(){try{var d=JSON.parse(localStorage.getItem(KEY));if(d&&Array.isArray(d.hives))return d;}catch(e){}return{hives:[]};}
 function isQuota(e){return e&&(e.name==='QuotaExceededError'||e.name==='NS_ERROR_DOM_QUOTA_REACHED'||e.code===22||e.code===1014);}
@@ -290,7 +291,7 @@ function draftU(f,old,label){if(!draft)return;if(f==='photos'){fhPush('photos',{
 /* ---------- per-box undo history (persisted) ---------- */
 var FHKEY='hiveNotes.fieldHist',FHMAX=20,FHBUDGET=200000,FHDAYS=7,SID=Date.now()+'-'+Math.random().toString(36).slice(2,6),fh=loadFH(),cfT={};
 var FNAMES={weather:'Weather',pests:'Pests / disease',treatments:'Treatments',notes:'Notes',date:'Date',strength:'Colony strength',queenSeen:'Queen seen',brood:'Brood pattern',honey:'Honey stores',photos:'Photos'};
-var FWORDS={weather:['weather','conditions','celsius','degrees celsius'],pests:['pests','pest','varroa','mites','disease','pests and disease'],treatments:['treatments','treatment','treated'],notes:['notes','note','comments','comment'],date:['date'],strength:['strength','colony','colony strength'],queenSeen:['queen','queen seen'],brood:['brood','brood pattern'],honey:['honey','honey stores','stores'],photos:['photos','photo','picture','pictures']};
+var FWORDS={weather:['weather','conditions','celsius','degrees celsius'],pests:['pests','pest','disease','pests and disease'],treatments:['treatments','treatment','treated'],notes:['notes','note','comments','comment'],date:['date'],strength:['strength','colony','colony strength'],queenSeen:['queen','queen seen'],brood:['brood','brood pattern'],honey:['honey','honey stores','stores'],photos:['photos','photo','picture','pictures']};
 function loadFH(){var o;try{o=JSON.parse(localStorage.getItem(FHKEY));}catch(e){}if(!o||typeof o!=='object'||!o.s)o={s:{}};var now=Date.now();Object.keys(o.s).forEach(function(k){var S=o.s[k];if(!S||!S.h||(S.fin&&now-S.fin>FHDAYS*864e5))delete o.s[k];});return o;}
 function saveFH(){var cur=fhScope();for(var g=0;g<400;g++){var j=JSON.stringify(fh);if(j.length<=FHBUDGET){try{localStorage.setItem(FHKEY,j);return;}catch(e){}}
   var ks=Object.keys(fh.s).filter(function(k){return k!==cur;}).sort(function(a,b){return (fh.s[a].t||0)-(fh.s[b].t||0);});
@@ -341,8 +342,8 @@ function vForm(){var h=hive(route.id);
   stp(2,'<div class="lbl">Queen seen?</div>'+seg('queenSeen',['yes','no'],['Yes, seen','Not seen']),'Say &ldquo;queen seen&rdquo; or &ldquo;not seen&rdquo;.')+
   stp(3,'<div class="lbl">Brood pattern</div>'+seg('brood',BROOD,['Solid','Spotty','Patchy','None']),'Say &ldquo;solid&rdquo;, &ldquo;spotty&rdquo;, &ldquo;patchy&rdquo; or &ldquo;none&rdquo;.')+
   stp(4,'<div class="lbl">Honey stores</div>'+seg('honey',HONEY),'Say &ldquo;honey low/medium/good/full&rdquo;.')+
-  stp(5,tf('pests','Varroa, SHB, chalkbrood…',1),'Just speak, or say &ldquo;restart&rdquo; to clear.')+
-  stp(6,tf('treatments','Product, dose…'),'Just speak, or say &ldquo;next&rdquo;.')+
+  stp(5,gridHtml('pests'),'Say pest names, e.g. &ldquo;varroa and wax moth&rdquo;, or &ldquo;none seen&rdquo;. Tap to toggle.')+
+  stp(6,gridHtml('treatments'),'Say products, e.g. &ldquo;oxalic acid&rdquo;, or &ldquo;none&rdquo;. Doses go in Notes.')+
   stp(7,tf('notes','Anything else…',1),'Just speak, or say &ldquo;restart&rdquo; to clear.')+
   stp(8,'<div class="lbl">Photos</div><div id="thumbs">'+thumbsHtml(draft.photos,true)+'</div><button type="button" class="primary" data-act="camOpen" data-say="open camera|open the camera|camera" style="margin-top:8px;width:100%">&#128247; Open camera</button><label class="btn" for="f_photos" data-say="pick photos|choose photos|add photos|gallery" style="margin-top:8px;width:100%;color:var(--text)">&#128193; Pick photos (tap)</label><input id="f_photos" type="file" accept="image/*" capture="environment" multiple hidden><div id="busy" class="busy" hidden>Processing photos…</div>','Say &ldquo;open camera&rdquo;, &ldquo;take a photo&rdquo;, or &ldquo;finish&rdquo;.')+
   '<div class="bar"><button type="button" id="delDraftBtn" class="danger delDraft" data-act="delDraft" data-say="delete inspection|delete this inspection|delete" aria-label="Delete inspection" title="Delete inspection">&#128465;</button><button type="button" id="prevBtn" data-act="prev">Cancel</button><button type="button" id="saveDraftBtn" class="saveDraft" data-act="saveDraft" data-say="save draft" aria-label="Save draft">&#128190; Save</button><button type="button" id="nextBtn" class="primary" data-act="next">Next &rsaquo;</button></div></form>';}
@@ -390,7 +391,7 @@ function str(v){return typeof v==='string'?v:'';}
 function validate(d){if(!d||typeof d!=='object'||!Array.isArray(d.hives))throw new Error('This is not a Hive Notes backup file.');
   return d.hives.map(function(h){if(!h||typeof h.name!=='string'||!h.name.trim())throw new Error('A hive in the file has no name.');
     return{id:str(h.id)||uid(),name:h.name.trim(),notes:str(h.notes),created:+h.created||Date.now(),inspections:(Array.isArray(h.inspections)?h.inspections:[]).map(function(i){if(!i||typeof i!=='object')throw new Error('Bad inspection in file.');
-      return{id:str(i.id)||uid(),created:+i.created||Date.now(),date:/^\d{4}-\d{2}-\d{2}$/.test(i.date)?i.date:today(),weather:str(i.weather),strength:['weak','medium','strong'].indexOf(i.strength)>=0?i.strength:'',queenSeen:['yes','no'].indexOf(i.queenSeen)>=0?i.queenSeen:'',brood:str(i.brood),honey:str(i.honey),pests:str(i.pests),treatments:str(i.treatments),notes:str(i.notes),
+      return{id:str(i.id)||uid(),created:+i.created||Date.now(),date:/^\d{4}-\d{2}-\d{2}$/.test(i.date)?i.date:today(),weather:str(i.weather),strength:['weak','medium','strong'].indexOf(i.strength)>=0?i.strength:'',queenSeen:['yes','no'].indexOf(i.queenSeen)>=0?i.queenSeen:'',brood:str(i.brood),honey:str(i.honey),pests:str(i.pests),treatments:str(i.treatments),pestsL:Array.isArray(i.pestsL)?i.pestsL.map(String):undefined,treatmentsL:Array.isArray(i.treatmentsL)?i.treatmentsL.map(String):undefined,notes:str(i.notes),
         photos:(Array.isArray(i.photos)?i.photos:[]).filter(function(p){return typeof p==='string'&&/^data:image\/(jpeg|png|webp|gif);base64,/.test(p);})};})};});}
 function importHives(hives,mode){fh={s:{}};saveFH();var before=JSON.stringify(state),bAll=JSON.stringify(state.hives);
   if(mode==='replace')state={hives:hives};
@@ -505,7 +506,7 @@ function listen(label,onFinal,btn,opts){requestWakeLock();opts=opts||{};
   r._flush=function(){if(failed||r._dl)return;var g=(got+' '+tmp0).trim();failed=true;if(g)deliver(g);};
   function deliver(g){r._dl=true;endUI(true);setInd('done',label,g);var i=ind;setTimeout(function(){if(ind===i){ind.remove();ind=null;}},1500);resumeHF();try{onFinal(g);}catch(err){toast('Error: '+err.message,true);}}
   r.onstart=r.onaudiostart=function(){if(rec!==r)return;started=true;clearTimeout(watchdog);clearBlock();setInd('listening',label);};
-  r.onresult=function(e){if(rec!==r)return;var fin='',tmp='';r._f=r._f||[];for(var i=Math.min(e.resultIndex,e.results.length);i<e.results.length;i++){var t=e.results[i].isFinal?pickAlt(e.results[i]):e.results[i][0].transcript;if(e.results[i].isFinal){fin+=t;r._f[i]=t.trim();}else tmp+=t;}
+  r.onresult=function(e){if(rec!==r)return;var fin='',tmp='';r._f=r._f||[];for(var i=Math.min(e.resultIndex,e.results.length);i<e.results.length;i++){var t=e.results[i].isFinal?pickAlt(e.results[i]):e.results[i][0].transcript;if(e.results[i].isFinal){t=pestLock(t,pestCands([].map.call(e.results[i],function(x){return x.transcript;}).concat(r._pi||[])));r._pi=[];fin+=t;r._f[i]=t.trim();}else{tmp+=t;r._pi=(r._pi||[]).concat([t]).slice(-6);}}
     if(fin){voiceWorked=true;got=joinFinals(r._f);}tmp0=tmp.trim();setInd(fin?'done':'listening',label,(got+(tmp0?' '+tmp0:'')).trim());
     if(opts.cont){clearTimeout(sil);sil=setTimeout(function(){if(rec===r){try{r.stop();}catch(x){}}},8000);}};
   r.onerror=function(e){if(rec!==r)return;var er=e.error;
@@ -708,8 +709,8 @@ var TEMP_RE=/-?\d+(?:[.,]\d+)?°[CF]/;
 function isTempPhrase(t){if(!TEMP_RE.test(t))return false;var rest=norm(t.replace(/-?\d+(?:[.,]\d+)?°[CF]/g,' ')).split(' ').filter(Boolean);return rest.every(function(x){return /^(it|its|it s|s|is|was|about|around|roughly|and|a|bit|today|outside|weather|temperature|temp|now|the|very|quite|but|with|degrees?)$/.test(x)||WEATHER.indexOf(x)>=0;});}
 var VOCAB=['varroa','brood','queen','cells','super','hive','tool','capped','beetle','nectar','foundation','swarm','drone','larvae','eggs','honey','stores','strength','strong','weak','medium','solid','spotty','patchy','weather','pests','notes','treatments','next','back','save','done','home','photo','sunny','cloudy','windy','calm','rainy','mites','seen','frames','comb'];
 function vocabScore(t){var w=norm(t).split(' '),s=0;w.forEach(function(x){if(VOCAB.indexOf(x)>=0)s+=1;});if(isCmd(norm(t)))s+=3;if(TEMP_RE.test(t))s+=10;return s;}
-function pickAlt(res){var best=null,bs=-1,w0=res.length?norm(res[0].transcript).split(' ').length:0;for(var i=0;i<res.length;i++){var raw=res[i].transcript,f=fixVocab(raw),wn=norm(f).split(' ').length,sc=vocabScore(f)-i*0.5+(f!==raw?0.2:0)-(wn<w0*0.8?3:0);if(sc>bs){bs=sc;best=f;}}return best==null?'':best;}
-var FIELDKW=/^(weather|pests?|disease|mites|varroa|treatments?|treated|notes?|comment|date)\b/;
+function pickAlt(res){var ph,best=null,bs=-1,w0=res.length?norm(res[0].transcript).split(' ').length:0;for(var i=0;i<res.length;i++){var raw=res[i].transcript,f=fixVocab(raw),wn=norm(f).split(' ').length,ph=pestHits(pestFix(f,false)),sc=vocabScore(f)-i*0.5+(f!==raw?0.2:0)-(wn<w0*0.8&&!ph?3:0)+2*ph;if(sc>bs){bs=sc;best=f;}}return best==null?'':best;}
+var FIELDKW=/^(weather|pests?|disease|treatments?|treated|notes?|comment|date)\b/;
 function isCmd(n,raw){if(!n)return false;if(raw&&isTempPhrase(raw))return true;if(/^undo\b|\bundo$/.test(n))return true;if(/^((start|begin|end|finish|stop) (an |the |a |this )?(apiary )?round|next hive|skip( hive)?|(continue|resume) round)$/.test(n))return true;if(CAM_OPEN.test(n)||CAM_SNAP.test(n)||/^((switch|flip|other|back|rear|hive|front|selfie) camera)$/.test(n))return true;if(/^(undo|scroll (up|down)|page (up|down)|(next|previous|prev) page|show numbers|hide numbers|(press|number|button|tap) \d+)$/.test(n))return true;
   if(/^(next|continue|back|previous|go back|save|done|finish|cancel|stop|go home|home|open home|photo|photos|take a? ?photo|add photos?|picture|camera|help|undo|undo last)( inspection| please)?$/.test(n))return true;
   if(FIELDKW.test(n))return true;
@@ -726,14 +727,83 @@ function undoToast(el,old){var o=document.querySelector('.toast');if(o)o.remove(
 function restartField(el){if(!el)return;stopListen();clearField(el);
   if(hfOn){el.focus();hfShow('Hands-free listening','Cleared – speak again');return;}
   if((SR||msUse())&&!insecure())dictateInto(el);else el.focus();}
+/* ---------- v30: pest & treatment button grids + sound-alike pest matching ---------- */
+var PEST_B=[['Varroa mites',['varroa mites','varroa mite','varroa','varroa destructor','mites','mite','varroa count','mite drop']],
+ ['Small hive beetle',['small hive beetle','small hive beetles','hive beetle','hive beetles','beetles','beetle','shb','aethina']],
+ ['Wax moth',['wax moth','wax moths','greater wax moth','lesser wax moth','moth','moths']],
+ ['Hornets',['hornets','hornet']],['Asian hornet',['asian hornet','asian hornets']],['Wasps',['wasps','wasp']],['Ants',['ants']],['Mice',['mice','mouse']],
+ ['Robber bees',['robber bees','robbers','robbing','robber bee']],['Cape bee (capensis)',['cape bees','cape bee','capensis','cape honeybee']],
+ ['Laying workers',['laying workers','laying worker']],['Bee pirate',['bee pirate','bee pirates','beewolf','bee wolf']],
+ ["Death's-head hawkmoth",["death's-head hawkmoth",'deaths head hawkmoth','death head hawkmoth','hawkmoth','hawk moth']],['Honey badger',['honey badger','honey badgers','badger']],
+ ['Chalkbrood',['chalkbrood','chalk brood']],['Sacbrood',['sacbrood','sac brood']],['Stonebrood',['stonebrood','stone brood']],
+ ['American foulbrood',['american foulbrood','american foul brood','afb']],['European foulbrood',['european foulbrood','european foul brood','efb']],
+ ['Nosema',['nosema','nosema ceranae','nosema apis']],['Deformed wing virus',['deformed wing virus','deformed wing','wing virus','dwv']],
+ ['Tracheal mites',['tracheal mites','tracheal mite','acarine']],['Braula',['braula','braula fly','bee louse','bee lice']]];
+var TREAT_B=[['Oxalic acid',['oxalic acid','oxalic','oxalic dribble','oxalic vapour','oxalic vaporisation']],['Formic acid',['formic acid','formic']],['Formic Pro',['formic pro','formic pro strips']],
+ ['MAQS',['maqs','maqs strips','mite away quick strips']],['Apivar',['apivar']],['Apiguard',['apiguard']],['Apistan',['apistan']],['Thymol',['thymol']],
+ ['ApiLife Var',['apilife var','apilife']],['Thymovar',['thymovar']],['Bayvarol',['bayvarol']],['CheckMite+',['checkmite','checkmite plus','check mite']],
+ ['Amitraz',['amitraz']],['Tactic',['tactic']],['HopGuard',['hopguard','hop guard']],['Api-Bioxal',['api bioxal','bioxal']],
+ ['Drone brood removal',['drone brood removal','drone brood','drone removal','drone trapping']],['Fumagillin',['fumagillin']],['Terramycin',['terramycin','oxytetracycline']]];
+var GRID={pests:{B:PEST_B,none:'None seen',noneRe:/^(none|none seen|nothing|nothing seen|no pests?( seen| today| found)?|no pest or disease|no disease|all clear|clean|clear of pests)$/},
+ treatments:{B:TREAT_B,none:'None',noneRe:/^(none|nothing|no treatments?( today| given)?|not treated|untreated|no)$/}};
+/* sound-alike key: consonant classes, vowels dropped (Metaphone-like) */
+function phKey(s){return String(s).toLowerCase().replace(/[^a-z\s]/g,'').split(/\s+/).filter(Boolean).map(function(w){
+  w=w.replace(/^kn/,'n').replace(/^wr/,'r').replace(/ph/g,'f').replace(/ck/g,'k').replace(/sch/g,'sk').replace(/th/g,'t').replace(/sh|ch/g,'x').replace(/c(?=[eiy])/g,'s').replace(/[cqg]/g,'k').replace(/x/g,'ks').replace(/z/g,'s').replace(/[bpfv]/g,'p').replace(/d/g,'t').replace(/j/g,'k').replace(/m/g,'n');
+  var f=/^[aeiou]/.test(w)?'a':'';w=w.replace(/[aeiouwhy]/g,'').replace(/(.)\1+/g,'$1');return f+w;}).join('');}
+function sndSim(a,b){var A=norm(a).replace(/ /g,''),B=norm(b).replace(/ /g,'');if(A===B)return 1;var pa=phKey(a),pb=phKey(b),ps=(pa&&pb)?1-lev(pa,pb)/Math.max(pa.length,pb.length):0;return 0.55*ps+0.45*sim(A,B);}
+var PK_FILL=/^(the|a|an|of|uh|um|er|some|any|lots|few)$/;
+function gramsOf(w){var out=[];for(var i=0;i<w.length;i++){if(PK_FILL.test(w[i]))continue;var g=[w[i]],idx=[i],sk=0;out.push({t:g.join(' '),i:i,j:i,n:1});for(var j=i+1;j<w.length&&g.length<3;j++){if(PK_FILL.test(w[j])){if(++sk>2)break;continue;}g.push(w[j]);idx.push(j);out.push({t:g.join(' '),i:i,j:j,n:g.length});}}return out;}
+/* find canonical terms in text. strict = free-text use (Notes): high bar, whole-word-count match, long words only */
+function termFind(B,t,thr,strict){var w=norm(t).split(' ').filter(Boolean),gs=gramsOf(w),hits=[];
+  gs.forEach(function(g){B.forEach(function(b,bi){b[1].forEach(function(al){var an=norm(al),nw=an.split(' ').length;if(strict&&(nw!==g.n||an.replace(/ /g,'').length<6))return;if(Math.abs(nw-g.n)>1)return;var s=g.t===an?1:sndSim(g.t,an);if(strict&&g.t!==an&&sim(g.t.replace(/ /g,''),an.replace(/ /g,''))<0.6)s=0;if(g.t!==an&&an.replace(/ /g,'').length<=5&&(s<0.88||sim(g.t,an)<0.7))s=0;if(s>=thr)hits.push({b:bi,s:s+(g.t===an?0.01*nw:0)+0.001*nw,i:g.i,j:g.j,al:al,g:g.t});});});});
+  hits.sort(function(a,b){return b.s-a.s;});var used={},got=[],seen={};hits.forEach(function(h){for(var k=h.i;k<=h.j;k++)if(used[k])return;for(k=h.i;k<=h.j;k++)used[k]=1;got.push(h);});
+  got.sort(function(a,b){return a.i-b.i;});return got;}
+function pestHits(t){return termFind(PEST_B,t,0.995,false).length;}
+/* Notes/free text: snap clear sound-alikes of pest names to the proper spelling (strict) */
+function pestSnap(t){var hs=termFind(PEST_B,t,0.86,true).filter(function(h){return h.s<0.995;});if(!hs.length)return t;
+  hs.forEach(function(h){var words=h.g.split(' ');var re=new RegExp('\\b'+words.map(function(x){return x.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');}).join("[\\s,.'’;:\\-]+(?:(?:the|a|an|of|uh|um|er)[\\s,.;:\\-]+){0,2}")+'\\b','i');t=t.replace(re,function(m){return /^[A-Z]/.test(m)?h.al.charAt(0).toUpperCase()+h.al.slice(1):h.al;});});return t;}
+/* lock: if an interim or another alternative had a pest name, keep it in the final text */
+function pestLock(ft,cands){if(!cands||!cands.length)return ft;var have={};termFind(PEST_B,ft,0.995,false).forEach(function(h){have[h.al]=1;});
+  cands.forEach(function(al){if(have[al])return;var an=norm(al),nw=an.split(' ').length,w=norm(ft).split(' ').filter(Boolean),best=null,bs=0.5;
+    gramsOf(w).forEach(function(g){if(Math.abs(g.n-nw)>1)return;var s=sndSim(g.t,an);if(s>bs){bs=s;best=g;}});
+    if(best){var words=best.t.split(' ');var re=new RegExp('\\b'+words.join("[\\s,.'’;:\\-]+(?:\\S+[\\s,.;:\\-]+){0,2}?")+'\\b','i');ft=ft.replace(re,function(m){return /^[A-Z]/.test(m)?al.charAt(0).toUpperCase()+al.slice(1):al;});have[al]=1;}});return ft;}
+function pestCands(arr){var c=[];(arr||[]).forEach(function(x){termFind(PEST_B,pestFix(fixVocab(x),false),0.995,false).forEach(function(h){if(c.indexOf(h.al)<0)c.push(h.al);});});return c;}
+/* grid state: draft[f] stays a joined string (history/PDF/export/old records); draft[f+'L'] holds the list */
+function gParts(s){return String(s||'').split(/\s*[,;]\s*/).map(function(x){return x.trim();}).filter(Boolean);}
+function gLabels(f){var G=GRID[f];return G.B.map(function(b){return b[0];}).concat([G.none]);}
+function gSel(f){var L=gLabels(f);return gParts(draft&&draft[f]).filter(function(p){return L.indexOf(p)>=0;});}
+function gLegacy(f){var L=gLabels(f);return gParts(draft&&draft[f]).filter(function(p){return L.indexOf(p)<0;});}
+function gSet(f,sel,label){var old=draft[f]||'',lg=gLegacy(f),nv=lg.concat(sel).join(', ');if(nv===old)return false;draftU(f,old,label);draft[f]=nv;draft[f+'L']=sel.slice();gSync(f);try{storeDraft();}catch(e){}return true;}
+function gSync(f){var sel=gSel(f);app.querySelectorAll('[data-act=pg][data-f="'+f+'"]').forEach(function(b){b.setAttribute('aria-pressed',sel.indexOf(b.dataset.v)>=0);});}
+function gToggle(f,v,on){var G=GRID[f],sel=gSel(f),has=sel.indexOf(v)>=0;if(on==null)on=!has;if(on===has)return false;
+  if(on){if(v===G.none)sel=[];else sel=sel.filter(function(x){return x!==G.none;});sel.push(v);}else sel=sel.filter(function(x){return x!==v;});
+  return gSet(f,sel,FNAMES[f]+(on?' + ':' − ')+v);}
+function gClear(f){if(!gSel(f).length&&!gLegacy(f).length)return false;var old=draft[f]||'';draftU(f,old,FNAMES[f]+' cleared');draft[f]='';draft[f+'L']=[];gSync(f);try{storeDraft();render();}catch(e){}return true;}
+/* speech -> buttons on a grid (no typing) */
+function gridVoice(f,t){var G=GRID[f];t=fixVocab(String(t||''));if(f==='pests')t=pestFix(t,true);var n=norm(t).replace(/^(add|select|tick|pick|also|and|plus|we have|we saw|i saw|saw|seen|there are|there is|found|some)\s+/,'').replace(/\s+(seen|found|present|spotted|today|please)$/,'');
+  if(!n)return null;
+  if(RESTART_RE.test(n)||/^(clear all|clear them|clear everything|untick all|none of them)$/.test(n)){return gClear(f)?FNAMES[f]+': all cleared':FNAMES[f]+': nothing selected';}
+  if(G.noneRe.test(n)){gToggle(f,G.none,true);return FNAMES[f]+': '+G.none;}
+  var rm=n.match(/^(remove|delete|unselect|deselect|untick|take off|take away|not|no|cancel)\s+(.+)$/),hs=termFind(G.B,rm?rm[2]:n,0.72,false);
+  if(!hs.length)return null;var names=[];hs.forEach(function(h){var v=G.B[h.b][0];if(names.indexOf(v)<0)names.push(v);});
+  names.forEach(function(v){gToggle(f,v,!rm);});return FNAMES[f]+(rm?' − ':': ')+names.join(', ');}
+function gridHtml(f){var G=GRID[f],sel=gSel(f),lg=gLegacy(f);
+  return '<label class="glab">'+FNAMES[f]+' <button type="button" class="mic gmic" data-act="gdict" data-f="'+f+'" aria-label="Speak '+FNAMES[f]+'">&#127908;</button></label><div class="seg pgrid" role="group" id="g_'+f+'">'+gLabels(f).map(function(v){return '<button type="button" data-act="pg" data-f="'+f+'" data-v="'+esc(v)+'" aria-pressed="'+(sel.indexOf(v)>=0)+'">'+esc(v)+'</button>';}).join('')+'</div>'+(lg.length?'<p class="legacy">Earlier text (kept): '+esc(lg.join(', '))+'</p>':'');}
+function gridDictate(f){var g=document.getElementById('g_'+f);if(!g)return;var done=function(t){var r=gridVoice(f,t);toast(r?'Heard “'+t+'” → '+r:'Heard “'+t+'” – no '+(f==='pests'?'pest':'treatment')+' name matched. Read a button aloud.',!r);};
+  if(hfOn){toast('Hands-free is on – just say the names, e.g. “varroa and wax moth”.');return;}
+  if(msUse()){msDictate(g,done);return;}if(navigator.onLine===false&&!msHave()){toast('Offline dictation not downloaded – see Help',true);return;}
+  if(rec){stopListen();setTimeout(function(){gridDictate(f);},350);return;}
+  listen('Say '+(f==='pests'?'pest':'treatment')+' names, e.g. '+(f==='pests'?'“varroa and wax moth”':'“oxalic acid”'),done,app.querySelector('.gmic[data-f="'+f+'"]'));}
 var vIns={};
 function vWords(x){return norm(x).split(' ').filter(Boolean);}
 function vTidy(t,prev){t=t.replace(/\s*\b(full stop|period)\b/gi,'.').replace(/\s*\bcomma\b/gi,',').replace(/\s*\bquestion mark\b/gi,'?').replace(/\s*\b(exclamation mark)\b/gi,'!').replace(/\s*\b(new line|next line|new paragraph)\b\s*/gi,'\n').replace(/\bi\b/g,'I').replace(/([.!?]\s+|\n)([a-z])/g,function(m,a,b){return a+b.toUpperCase();});if(!/\S/.test(prev||'')||/[.!?\n]\s*$/.test(prev||''))t=t.replace(/^\s*([a-z])/,function(m,a){return a.toUpperCase();});return t;}
-function voiceInsert(el,t){t=String(t||'').trim();if(!el||!t)return false;t=pestFix(t,(el.dataset&&el.dataset.f)==='pests'||(el.dataset&&el.dataset.f)==='treatments');if(el.tagName==='TEXTAREA')t=vTidy(t,el.value);var k=el.id,now=Date.now(),L=vIns[k],v=el.value||'';
+function voiceInsert(el,t){t=String(t||'').trim();if(!el||!t)return false;t=pestFix(t,(el.dataset&&el.dataset.f)==='pests'||(el.dataset&&el.dataset.f)==='treatments');if(el.tagName==='TEXTAREA')t=pestSnap(t);if(el.tagName==='TEXTAREA')t=vTidy(t,el.value);var k=el.id,now=Date.now(),L=vIns[k],v=el.value||'';
   var tw=vWords(t),fw=vWords(v);
   if(L&&now-L.at<6000&&fw.length){var lw=vWords(L.t);
     // exact repeat of the last insertion, or text already at the field tail
     if(norm(t)===norm(L.t)||(tw.length&&fw.slice(-tw.length).join(' ')===tw.join(' ')))return false;
+    // pest lock: recogniser re-sent the same phrase with the pest name misheard -> keep what is there, add only the new tail
+    if(lw.length&&pestHits(L.t)){var lk=phKey(lw.join(' '));for(var q=Math.min(tw.length,lw.length+2);q>=Math.max(1,lw.length-1);q--){var pk2=phKey(tw.slice(0,q).join(' '));if(lk&&pk2&&1-lev(lk,pk2)/Math.max(lk.length,pk2.length)>=0.75&&tw.slice(0,lw.length).join(' ')!==lw.join(' ')){t=t.split(/\s+/).slice(q).join(' ');if(!t.trim())return false;tw=vWords(t);break;}}}
     // growing transcript: new text starts with what we just inserted -> keep only the new part
     if(lw.length&&tw.slice(0,lw.length).join(' ')===lw.join(' ')){var rw=t.split(/\s+/);t=rw.slice(lw.length).join(' ');if(!t)return false;tw=vWords(t);}
     // longest overlap between field tail and start of new text
@@ -742,7 +812,7 @@ function voiceInsert(el,t){t=String(t||'').trim();if(!el||!t)return false;t=pest
   var f=el.dataset&&el.dataset.f;if(f)commitF(f);if(k==='hName'||k==='hNotes'){ahH[k].push(v);ahT[k]=0;}
   el.value=(v&&!/\s$/.test(v)&&!/^[.,?!\n]/.test(t)?v+' ':v)+t.trim();if(k==='hName'||k==='hNotes'){ahCur[k]=el.value;ahT[k]=Date.now();}el.dispatchEvent(new Event('input',{bubbles:true}));if(k==='hName'||k==='hNotes')ahT[k]=Date.now();if(f)commitF(f);if(el.tagName==='TEXTAREA'){try{el.scrollTop=el.scrollHeight;}catch(e){}}
   vIns[k]={t:(L&&now-L.at<6000&&k in vIns?((vIns[k].t+' '+t).trim()):t),at:now};vIns[k].t=t;vIns[k].at=now;return true;}
-function undoBox(){var el=null;if(route.name==='form'&&draft&&actT&&TEXTF[actT])el=document.getElementById('f_'+actT);else if(route.name==='addHive'&&(actT==='hName'||actT==='hNotes'))el=document.getElementById(actT);
+function undoBox(){if(route.name==='form'&&draft&&GRID[actT]){if(!gSel(actT).length&&!gLegacy(actT).length)return 'Nothing to undo – '+FNAMES[actT]+' is empty';gClear(actT);return FNAMES[actT]+' cleared';}var el=null;if(route.name==='form'&&draft&&actT&&TEXTF[actT])el=document.getElementById('f_'+actT);else if(route.name==='addHive'&&(actT==='hName'||actT==='hNotes'))el=document.getElementById(actT);
   if(!el)return null;if(!el.value)return 'Nothing to undo – '+vtName(actT)+' is empty';var f=el.dataset&&el.dataset.f,k=el.id;if(f)commitF(f);if(k==='hName'||k==='hNotes'){ahH[k].push(el.value);ahT[k]=0;}
   el.value='';if(f&&draft)draft[f]='';el.dispatchEvent(new Event('input',{bubbles:true}));if(k==='hName'||k==='hNotes'){ahCur[k]='';ahT[k]=Date.now();}if(f)commitF(f);delete vIns[k];if(f==='weather'){wxLock=false;wxSync();applyVT();}return 'Cleared '+vtName(actT);}
 function joinFinals(a){var out=[];a.forEach(function(x){if(!x)return;var nx=norm(x),last=out.length?norm(out[out.length-1]):'';if(!nx)return;if(last&&(nx===last||last.slice(-nx.length)===nx))return;if(last&&nx.indexOf(last)===0){out[out.length-1]=x;return;}var all=norm(out.join(' '));if(all&&nx.indexOf(all)===0){out=[x];return;}out.push(x);});return out.join(' ').trim();}
@@ -786,7 +856,7 @@ function msShow(state,msg){var d=document.getElementById('recInd');if(!d){d=docu
  d.dataset.state=state;d.querySelector('.st').textContent=state==='busy'?'Transcribing on phone…':'Listening (offline)…';d.querySelector('.msg').textContent=msg||'';d.querySelector('button').hidden=state==='busy';}
 function msHide(){var d=document.getElementById('recInd');if(d)d.remove();}
 function msFallback(el,why){msHide();if(navigator.onLine===false){toast(why+' – no signal for built-in voice',true);el.focus();return;}toast(why+' – using built-in voice',true);googleDictate(el);}
-function msDictate(el){if(msCur){msCur.stop();return;}if(rec){stopListen();}
+function msDictate(el,cb){if(msCur){msCur.stop();return;}if(rec){stopListen();}
  var paused=false;if(hfOn||hfRec){paused=hfOn;hfStop();}msLoad().catch(function(){});
  var btn=app.querySelector('.mic[data-target="'+el.id+'"]');
  navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}}).then(function(stream){
@@ -805,8 +875,8 @@ function msDictate(el){if(msCur){msCur.stop();return;}if(rec){stopListen();}
    if(!blob.size){msHide();resume();return;}
    msShow('busy',ms.ready?'':'Loading speech model…');var tt=Date.now();
    msToBlob16k(blob).then(msRun).then(function(r){msHide();var txt=fixVocab(String(r.text||'').trim());window.__msLast={ms:Date.now()-tt,run:r.ms,text:txt};if(!txt){toast('Nothing recognised – try again');resume();return;}
-     if(RESTART_RE.test(norm(txt))){restartField(el);resume();return;}
-     if(document.body.contains(el)){var ok=voiceInsert(el,txt);toast(ok?'Added: “'+(txt.length>60?txt.slice(0,60)+'…':txt)+'”':'Already added – skipped repeat');}resume();})
+     if(!cb&&RESTART_RE.test(norm(txt))){restartField(el);resume();return;}
+     if(cb){cb(txt);resume();return;}if(document.body.contains(el)){var ok=voiceInsert(el,txt);toast(ok?'Added: “'+(txt.length>60?txt.slice(0,60)+'…':txt)+'”':'Already added – skipped repeat');}resume();})
    .catch(function(err){resume();msFallback(el,'Offline dictation problem');});};
   try{mr.start(1000);}catch(e){stop();}
  }).catch(function(e){if(paused&&hfOn){hfStart();}var n=e&&e.name;if(n==='NotAllowedError'||n==='SecurityError'){msHide();micBlocked('denied');return;}msFallback(el,'Mic not available');});}
@@ -840,10 +910,11 @@ function command(text){text=fixVocab(text);var t=norm(text),w=t.split(' ');
   if(route.name==='form'){var did=[];
     if(has(/^(go home|home|open home)$/)){leaveForm({name:'home'});return 'Home (draft saved)';}
     if(has(/^undo( last)?$/)){undoLast();return 'Undo last';}
-    var fields={weather:['weather'],pests:['pests','pest','disease','mites','varroa'],treatments:['treatment','treatments','treated'],notes:['notes','note','comment'],date:['date']};
+    var fields={weather:['weather'],pests:['pests','pest','disease'],treatments:['treatment','treatments','treated'],notes:['notes','note','comment'],date:['date']};
     for(var f in fields){var kw=fields[f].filter(function(k){return w[0]===k||sim(w[0],k)>=0.8;})[0];if(kw&&!(f==='weather'&&w.length>1&&WEATHER.some(function(x){return t.indexOf(x)>=0;})&&false)){
-      var keepAll=/^(varroa|mites|disease)$/.test(kw);var restT=keepAll?text.trim():text.trim().split(/\s+/).slice(1).join(' ').replace(/^(is|are|was|were|:)\s+/i,'');actT=f;setStep(FSTEP[f]);var el=document.getElementById('f_'+f);
+      var keepAll=false;var restT=keepAll?text.trim():text.trim().split(/\s+/).slice(1).join(' ').replace(/^(is|are|was|were|:)\s+/i,'');actT=f;setStep(FSTEP[f]);var el=document.getElementById('f_'+f);
       if(f==='date')return 'Date field';
+      if(GRID[f]){applyVT();if(restT){var gr0=gridVoice(f,restT);return gr0||FNAMES[f]+': no match for “'+restT+'” – read a button aloud';}return FNAMES[f]+': say the names';}
       if(restT){voiceInsert(el,restT);return TEXTF[f]+': “'+restT+'”';}
       setTimeout(function(){dictateInto(el);},300);return TEXTF[f]+': speak now';}}
     if(has(/^(done|finish|save inspection|finish inspection)$/)){submitInsp();return 'Finished – inspection saved';}
@@ -853,6 +924,7 @@ function command(text){text=fixVocab(text);var t=norm(text),w=t.split(' ');
     if(has(/^(back|previous|go back)$/)){setStep((draft.step||0)-1);return 'Back → step '+((draft.step||0)+1)+' '+STEPS[draft.step||0];}
     if(has(/\b(photo|photos|picture|camera)\b/)){return openCamera(/\b(take|snap|capture)\b/.test(t));}
     var tm=text.match(new RegExp(TEMP_RE.source,'g'));if(tm){tm.forEach(function(x){addWeather(x.toUpperCase().replace('°C','°C'));});wxLockOn();did.push('Weather: '+tm.join(', '));t=norm(text.replace(/-?\d+(?:[.,]\d+)?°[CF]/g,' '));w=t.split(' ');}
+    var pmh=termFind(PEST_B,pestFix(text,false),0.9,false);if(pmh.length){var pn=[];pmh.forEach(function(h){var v=PEST_B[h.b][0];if(pn.indexOf(v)<0){pn.push(v);gToggle('pests',v,true);}});actT='pests';setStep(FSTEP.pests);applyVT();return FNAMES.pests+': '+pn.join(', ');}
     var honeyCtx=has(/\b(honey|stores|store|stored|food|nectar)\b/),broodCtx=has(/\bbrood\b/);var qcells=has(/\bqueen cells?\b/);
     if(has(/\bqueen\b/)&&!qcells){if(has(/\b(no|not|didn t|didnt|missing|none|without|never)\b/)){setSeg('queenSeen','no');did.push('Queen: Not seen');}else{setSeg('queenSeen','yes');did.push('Queen: Yes, seen');}}
     if(broodCtx){var bo=BROOD.filter(function(o){return wordHit(w,o.split(' ')[0]);})[0];if(bo){setSeg('brood',bo);did.push('Brood: '+cap(bo));}}
@@ -983,7 +1055,8 @@ function vtVoice(n,t){if(route.name!=='form'&&route.name!=='addHive')return null
   if(/^(previous|back|go back|previous box|previous one|last one)$/.test(n))return vtMove(-1);
   var j=vtJump(n);if(j){setVT(j);return 'Now: '+vtName(j);}
   if(actT==='queenSeen'){if(/^(yes|yeah|yep|seen|yes seen|saw her|i saw her)$/.test(n)){setSeg('queenSeen','yes');applyVT();return 'Queen: Yes, seen';}if(/^(no|nope|not seen|no queen)$/.test(n)){setSeg('queenSeen','no');applyVT();return 'Queen: Not seen';}}
-  var E=vtEls(actT);if(E&&!E.input&&E.box.classList.contains('seg')){var bs=[].slice.call(E.box.querySelectorAll('button')),best=null,bsc=0;bs.forEach(function(b){btnSays(b).forEach(function(w){var sc=sim(n,norm(w));if(sc>bsc){bsc=sc;best=b;}});});if(best&&bsc>=0.75){best.click();applyVT();return vtName(actT)+': '+btnLabel(best);}}
+  if(GRID[actT]&&route.name==='form'){var gv=gridVoice(actT,t);if(gv)return gv;}
+  var E=vtEls(actT);if(E&&!E.input&&E.box.classList.contains('seg')&&!GRID[actT]){var bs=[].slice.call(E.box.querySelectorAll('button')),best=null,bsc=0;bs.forEach(function(b){btnSays(b).forEach(function(w){var sc=sim(n,norm(w));if(sc>bsc){bsc=sc;best=b;}});});if(best&&bsc>=0.75){best.click();applyVT();return vtName(actT)+': '+btnLabel(best);}}
   return null;}
 function hfField(){var a=document.activeElement;return a&&app.contains(a)&&(a.tagName==='TEXTAREA'||(a.tagName==='INPUT'&&(!a.type||a.type==='text')))?a:null;}
 var hfLastT='',hfLastAt=0;
@@ -1111,12 +1184,12 @@ function voiceAct(t){t=fixVocab(t);var n=norm(t);if(!n)return null;
   if(round&&route.name==='roundSep'&&!topLayer()){var hq=n.replace(/^(open|go to|start|inspect|do)\s+/,'');var hm=bestMatch(hq,state.hives,function(h){return h.name;},0.7);if(hm&&!/^(next|skip|end|finish)/.test(n)){return roundGo(hm.id)||('Round: '+hm.name);}}
   if(/^(stop|stop listening|push to talk|hands free off)$/.test(n)){if(round)return 'Round in progress – hands-free stays on. Say “end round” to stop.';setHF(false);return 'Hands-free off';}
   if(/^(hands free|hands free on)$/.test(n)){setHF(true);return 'Hands-free on';}
-  if(/^(scroll down|page down|next page|more|show more|go down)$/.test(n))return pgMove(1);
+  if(/^(scroll down|page down|next page|more|show more|go down|more pests|more treatments|other pests|more options)$/.test(n))return pgMove(1);
   if(/^(scroll up|page up|previous page|prev page|go up)$/.test(n))return pgMove(-1);
   if(/^(show|hide) (numbers|button numbers)$/.test(n))return 'Button numbers are not used – say the button name';
   var nm=null;
   if(nm){var bl=voiceButtons().filter(function(b){return b.dataset.n===nm[1];})[0];return bl?pressBtn(bl):'No button number '+nm[1];}
-  var rs=n.match(/^(?:restart|clear) (weather|pests|treatments|notes)$/);if(rs&&route.name==='form'){setStep(FSTEP[rs[1]]);restartField(document.getElementById('f_'+rs[1]));return 'Cleared '+TEXTF[rs[1]];}
+  var rs=n.match(/^(?:restart|clear) (weather|pests|treatments|notes)$/);if(rs&&route.name==='form'&&GRID[rs[1]]){setStep(FSTEP[rs[1]]);gClear(rs[1]);return 'Cleared '+FNAMES[rs[1]];}if(rs&&route.name==='form'){setStep(FSTEP[rs[1]]);restartField(document.getElementById('f_'+rs[1]));return 'Cleared '+TEXTF[rs[1]];}
   if(cam){if(/^(switch|flip|change|swap|other)( the)? camera$|^(switch|flip) (it|lens|lenses)$/.test(n))return camSwitch();if(/^(back|rear|hive|main) camera$/.test(n))return camSwitch('environment');if(/^(front|selfie) camera$/.test(n))return camSwitch('user');if(CAM_SNAP.test(n))return camSnap();if(CAM_CLOSE.test(n))return closeCamera();}
   else if(route.name==='form'&&!document.querySelector('.overlay,.pdfOv')){if(CAM_OPEN.test(n))return openCamera(false);if(/^(take (a |the |another )?(photo|picture|pic|snap|shot)|snap|cheese|say cheese|capture)( please| now)?$/.test(n))return openCamera(true);}
   var L=topLayer();
@@ -1155,7 +1228,7 @@ function hfStart(){if(!hfOn||document.hidden||hfRec||rec||pttRetry)return;reques
   hfRec=r;r.lang=srLang();r.continuous=true;r.interimResults=true;r.maxAlternatives=5;var fatal=false,hst=false;
   var hwd=setTimeout(function(){if(hfRec===r&&!hst&&hfOn){hfRec=null;try{r.abort();}catch(e){}hfOther++;hfShow('Reconnecting voice…');hfSchedule();}},5000);
   r.onstart=function(){hst=true;clearTimeout(hwd);if(hfRec!==r)return;hfErrors=0;hfNet=0;hfAud=0;hfOther=0;clearBlock();hfShow('Hands-free listening');};
-  r.onresult=function(e){if(hfRec!==r)return;var tmp='';r._d=r._d||{};for(var i=Math.min(e.resultIndex,e.results.length);i<e.results.length;i++){var t=e.results[i][0].transcript;if(e.results[i].isFinal){hfErrors=0;hfWorked=true;voiceWorked=true;var ft=pickAlt(e.results[i]),nf=norm(ft),pv=r._d[i],lt=(r._lat&&Date.now()-r._lat<4000)?(r._last||''):'';if(!nf)continue;var nw=ft.trim().split(/\s+/),pw=(pv!=null?pv:lt).split(' ').filter(Boolean),grow=pw.length&&nf.split(' ').slice(0,pw.length).join(' ')===pw.join(' ');r._d[i]=nf;r._last=nf;r._lat=Date.now();if(grow&&nf!==pw.join(' ')&&!isCmd(nf,ft)&&!vtJump(nf)){var rest=nw.slice(pw.length).join(' ');if(rest)hfHandle(rest);continue;}hfHandle(ft);}else tmp+=t;}r._tmp=tmp.trim();if(tmp)hfShow('Hands-free listening',tmp.trim()+'…');};
+  r.onresult=function(e){if(hfRec!==r)return;var tmp='';r._d=r._d||{};for(var i=Math.min(e.resultIndex,e.results.length);i<e.results.length;i++){var t=e.results[i][0].transcript;if(e.results[i].isFinal){hfErrors=0;hfWorked=true;voiceWorked=true;var _al=[].map.call(e.results[i],function(x){return x.transcript;}),ft=pestLock(pickAlt(e.results[i]),pestCands(_al.concat(r._pi&&Date.now()-r._pit<6000?r._pi:[]))),_z=(r._pi=[]),nf=norm(ft),pv=r._d[i],lt=(r._lat&&Date.now()-r._lat<4000)?(r._last||''):'';if(!nf)continue;var nw=ft.trim().split(/\s+/),pw=(pv!=null?pv:lt).split(' ').filter(Boolean),grow=pw.length&&nf.split(' ').slice(0,pw.length).join(' ')===pw.join(' ');r._d[i]=nf;r._last=nf;r._lat=Date.now();if(grow&&nf!==pw.join(' ')&&!isCmd(nf,ft)&&!vtJump(nf)){var rest=nw.slice(pw.length).join(' ');if(rest)hfHandle(rest);continue;}hfHandle(ft);}else{tmp+=t;r._pi=(r._pi||[]).concat([t]).slice(-6);r._pit=Date.now();}}r._tmp=tmp.trim();if(tmp)hfShow('Hands-free listening',tmp.trim()+'…');};
   r.onerror=function(e){if(hfRec!==r)return;var er=e.error;
     if(er==='not-allowed'||er==='service-not-allowed'){if(!hfWorked&&!voiceWorked){fatal=true;clearTimeout(hwd);micBlocked(er);return;}permDenied(function(){if(hfOn)micBlocked('denied');});hfOther++;hfShow('Reconnecting voice…');return;}
     if(er==='language-not-supported'&&srLangNext()){hfShow('Reconnecting voice…');return;}if(er==='language-not-supported'){fatal=true;setHF(false,true);voiceProblem(VERR[er],GBOARD);return;}
@@ -1191,6 +1264,8 @@ app.addEventListener('click',function(e){var b=e.target.closest('[data-act]');if
   else if(a==='pdfAll')exportPdf(state.hives,'All hives');
   else if(a==='pdfHive'){var hp=hive(route.id);if(hp)exportPdf([hp],hp.name);}
   else if(a==='wx')wxToggle(b.dataset.v);
+  else if(a==='pg'){actT=b.dataset.f;gToggle(b.dataset.f,b.dataset.v);applyVT();}
+  else if(a==='gdict'){actT=b.dataset.f;applyVT();gridDictate(b.dataset.f);}
   else if(a==='seg'){var f=b.dataset.f;actT=f;setSeg(f,draft[f]===b.dataset.v?'':b.dataset.v);}
   else if(a==='camOpen')openCamera(false);
   else if(a==='rmPhoto'){var rix=+b.dataset.ix;fhPush('photos',{op:'rm',ix:rix,d:draft.photos[rix]},'Remove photo');draft.photos.splice(rix,1);storeDraft();document.getElementById('thumbs').innerHTML=thumbsHtml(draft.photos,true);}
@@ -1208,7 +1283,7 @@ app.addEventListener('submit',function(e){e.preventDefault();
   if(e.target.id==='hiveForm'){var n=document.getElementById('hName').value.trim();if(!n){toast('Please enter a hive name',true);return;}
     var h={id:uid(),name:n,notes:document.getElementById('hNotes').value.trim(),created:Date.now(),inspections:[]};state.hives.push(h);if(save()){pushH('Add hive “'+n+'”',[{id:h.id,ix:-1,j:null}]);toast('Hive added');go({name:'hive',id:h.id});}}
   else if(e.target.id==='inspForm'){if((draft.step||0)<LASTSTEP)setStep(draft.step+1);else submitInsp();}});
-window.HiveNotes={vt:function(){return actT;},route:function(){return route;},setStepN:function(k){draft.step=k;showStep();},setVT:setVT,restartField:restartField,openMicGuide:openMicGuide,openSetup:openSetup,uaKind:uaKind,fixSteps:fixSteps,micBlocked:micBlocked,setHF:setHF,isHF:function(){return hfOn;},resize:resize,validate:validate,importHives:importHives,command:command,getState:function(){return state;},getDraft:function(){return draft;},getRound:function(){return round;},fieldHist:function(){return fh;},camOpen:function(){return !!cam;},camFacing:function(){return cam&&cam.facing;},camTracks:function(){return cam&&cam.stream?cam.stream.getTracks().map(function(t){return t.readyState;}):null;},voiceAct:voiceAct,wxVoice:wxVoice,voiceInsert:voiceInsert,fixVocab:fixVocab,clearVIns:function(){vIns={};},fixTemp:fixTemp,refit:refit,voiceButtons:voiceButtons,hfHandle:hfHandle,fixVocab:fixVocab,pickAlt:pickAlt,isCmd:isCmd,undo:undoLast,undoStack:function(){return ustack;},KEY:KEY,saveDraft:saveDraftNow,exportPdf:exportPdf};
+window.HiveNotes={PEST_B:PEST_B,TREAT_B:TREAT_B,pestFix:pestFix,gridVoice:gridVoice,termFind:termFind,pestSnap:pestSnap,pestLock:pestLock,phKey:phKey,gSel:gSel,draft:function(){return draft;},vt:function(){return actT;},route:function(){return route;},setStepN:function(k){draft.step=k;showStep();},setVT:setVT,restartField:restartField,openMicGuide:openMicGuide,openSetup:openSetup,uaKind:uaKind,fixSteps:fixSteps,micBlocked:micBlocked,setHF:setHF,isHF:function(){return hfOn;},resize:resize,validate:validate,importHives:importHives,command:command,getState:function(){return state;},getDraft:function(){return draft;},getRound:function(){return round;},fieldHist:function(){return fh;},camOpen:function(){return !!cam;},camFacing:function(){return cam&&cam.facing;},camTracks:function(){return cam&&cam.stream?cam.stream.getTracks().map(function(t){return t.readyState;}):null;},voiceAct:voiceAct,wxVoice:wxVoice,voiceInsert:voiceInsert,fixVocab:fixVocab,clearVIns:function(){vIns={};},fixTemp:fixTemp,refit:refit,voiceButtons:voiceButtons,hfHandle:hfHandle,fixVocab:fixVocab,pickAlt:pickAlt,isCmd:isCmd,undo:undoLast,undoStack:function(){return ustack;},KEY:KEY,saveDraft:saveDraftNow,exportPdf:exportPdf};
 (function(){var o=readDraft();if(o&&!hive(o.hive))clearDraft();})();
 try{history.replaceState({d:0,r:{name:'home'}},'');}catch(e){}render();
 document.querySelectorAll('.homeTap').forEach(function(el){var f=function(){stopListen();if(route.name==='form')leaveForm({name:'home'});else go({name:'home'});};el.onclick=f;el.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();f();}};});
