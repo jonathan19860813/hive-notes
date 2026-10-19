@@ -1,5 +1,5 @@
 /* Hive Notes service worker */
-const VERSION = 'hive-notes-v28';
+const VERSION = 'hive-notes-v29';
 const SHELL = ['./', './index.html', './manifest.json', './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-512-maskable.png', './icons/icon.svg', './Hive-Notes-Install-Guide.pdf', './Hive-Notes-Microphone-Guide.pdf'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL.map(u => new Request(u, {cache: 'reload'})))).then(() => self.skipWaiting()));
@@ -18,9 +18,12 @@ self.addEventListener('fetch', e => {
   }
   // everything else cross-origin (model files are cached by Transformers.js itself) is left alone
   if (u.origin !== location.origin) return;
+  // test/prototype pages (e.g. picker-test.html) are never cached or served from cache
+  if (/\/[^/]*-test\.html$/.test(u.pathname)) return;
   if (req.mode === 'navigate') {
     // network first for pages so updates arrive; fall back to cached shell offline
-    e.respondWith(fetch(req).then(r => { if (r.ok) { const cp = r.clone(); caches.open(VERSION).then(c => c.put('./index.html', cp)); } return r; })
+    const isShell = /\/(index\.html)?$/.test(u.pathname);
+    e.respondWith(fetch(req).then(r => { if (r.ok && isShell) { const cp = r.clone(); caches.open(VERSION).then(c => c.put('./index.html', cp)); } return r; })
       .catch(() => caches.match('./index.html', {ignoreSearch: true}).then(r => r || caches.match('./'))));
     return;
   }
