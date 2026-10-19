@@ -1,25 +1,18 @@
 /* Hive Notes service worker */
-const VERSION = 'hive-notes-v33';
-const SHELL = ['./', './index.html', './manifest.json', './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-512-maskable.png', './icons/icon.svg', './Hive-Notes-Install-Guide.pdf', './Hive-Notes-Microphone-Guide.pdf'];
+const VERSION = 'hive-notes-v34';
+const SHELL = ['./', './index.html', './manifest.json', './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-512-maskable.png', './icons/icon.svg', './Hive-Notes-Install-Guide.pdf'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL.map(u => new Request(u, {cache: 'reload'})))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.startsWith('hive-notes-') && k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => (k.startsWith('hive-notes-') && k !== VERSION) || k === 'hn-lib-v1' || k === 'transformers-cache').map(k => caches.delete(k)))).then(() => self.clients.claim()));
 });
 self.addEventListener('fetch', e => {
   const req = e.request;
   const u = new URL(req.url);
   if (req.method !== 'GET') return;
-  // pinned offline-dictation library files (Transformers.js / ONNX Runtime) from jsDelivr: cache-first, kept across app updates
-  if (u.origin === 'https://cdn.jsdelivr.net' && /\/npm\/(@huggingface\/transformers|onnxruntime-web)@\d/.test(u.pathname)) {
-    e.respondWith(caches.open('hn-lib-v1').then(c => c.match(req).then(hit => hit || fetch(req).then(r => { if (r.ok) c.put(req, r.clone()); return r; }))));
-    return;
-  }
-  // everything else cross-origin (model files are cached by Transformers.js itself) is left alone
+  // cross-origin requests are left alone
   if (u.origin !== location.origin) return;
-  // test/prototype pages (e.g. picker-test.html) are never cached or served from cache
-  if (/\/[^/]*-test\.html$/.test(u.pathname)) return;
   if (req.mode === 'navigate') {
     // network first for pages so updates arrive; fall back to cached shell offline
     const isShell = /\/(index\.html)?$/.test(u.pathname);

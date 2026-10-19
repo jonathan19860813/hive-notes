@@ -2,7 +2,7 @@
   "id": "./",
   "name": "Hive Notes",
   "short_name": "Hive Notes",
-  "description": "Voice-first beehive inspection notes with photos. Works offline; data stays on your phone.",
+  "description": "Quick tap-and-type beehive inspection notes with photos. Works offline; data stays on your phone.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
