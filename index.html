@@ -538,7 +538,7 @@ var FIXES=[
  [/\bbroad(?=\s+(pattern|frames?|nest|box|chamber|solid|spotty|patchy|is|looks)\b)/gi,'brood'],
  [/\b(solid|spotty|patchy|capped|open|good|no)\s+broad\b/gi,'$1 brood'],
  [/\b(high|hi|hive|i)\s+(tool|tull|tole)\b/gi,'hive tool'],
- [/\bsmall\s+(high|hi|hive|five|hide|I)\s+(beetles?|beatles?|beadles?)\b/gi,'small hive beetle'],
+ [/\bsmall\s+(high|hi|hive|five|hide|I)\s+(beetles?|beatles?|beadles?)\b/gi,function(m,a,b){return 'small hive beetle'+(/s$/i.test(b)?'s':'');}],
  [/\b(neck tar|necter|nectre|nektar)\b/gi,'nectar'],
  [/\b(found asian|found nation|foundations)\b/gi,'foundation'],
  [/\b(lava|lavae|larva e|larvy|larvie|larvay|lavvy)\b/gi,'larvae'],
@@ -560,8 +560,87 @@ var FIXES=[
  [/\b(chalk brewed|chalk broad|chuck brood)\b/gi,'chalkbrood'],
  [/\bfoul (brewed|broad)\b/gi,'foulbrood'],
  [/\b(drone comb|drawn comb)\b/gi,function(m){return m.toLowerCase();}],
- [/\b(brood box|broad box|brewed box)\b/gi,'brood box']
+ [/\b(brood box|broad box|brewed box)\b/gi,'brood box'],
+ /* v27 pests & treatments (distinctive mishearings only – safe anywhere) */
+ [/\b(vera|veroa|varoa|barrow|bar row|for roar|far roar|very|vero)\s+(mites?|mite count|counts?|loads?|levels?|treatments?|destructor|drop|infestation)\b/gi,function(m,a,b){return 'varroa '+b.toLowerCase();}],
+ [/\bfor roar\b/gi,'varroa'],
+ [/\bvarroa\s+(destroyer|destruct her|the structure)\b/gi,'Varroa destructor'],
+ [/\b(trachea|tracheal|track eel|tray kill)\s+(mites?|mights)\b/gi,function(m,a,b){return 'tracheal '+b.toLowerCase().replace('mights','mites');}],
+ [/\b(a carine|acarine|a corinne|ackerine)\b/gi,'acarine'],
+ [/\b(no seema|nose ma|nosima|no sema|nozema|no seamer)\b/gi,'Nosema'],
+ [/\bnosema\s+(see ran a|serrano|ceranae|sir anne)\b/gi,'Nosema ceranae'],
+ [/\b(tropi lay laps|tropi lalaps|tropilaelaps|tropil apps)\b/gi,'Tropilaelaps'],
+ [/\b(small|smell)\s+(hive|high|hi|five|hide)\s+(beetles?|beatles?|beadles?)\b/gi,function(m,a,b,c){return 'small hive beetle'+(/s$/i.test(c)?'s':'');}],
+ [/\b(s h b|s\.h\.b\.?|shb)\b/gi,'SHB'],
+ [/\b(a theena|aethina|athena tumida|a tina tumida|aethina tumida)\b/gi,'Aethina tumida'],
+ [/\b(lesser|greater)\s+wax\s+(moss|mouth|moths?)\b/gi,function(m,a,b){return a.toLowerCase()+' wax moth'+(/moths$/i.test(b)?'s':'');}],
+ [/\bwax (moss|mouth|moths)\b/gi,function(m,a){return /moths/i.test(a)?'wax moths':'wax moth';}],
+ [/\b(chalk brewed|chalk broad|chuck brood|chalk brood)\b/gi,'chalkbrood'],
+ [/\b(stone brood|stone broad|stone brewed)\b/gi,'stonebrood'],
+ [/\b(sack brood|sac brood|sack broad|sack brewed)\b/gi,'sacbrood'],
+ [/\bamerican\s+foul\s*(brood|brewed|broad)\b/gi,'American foulbrood'],
+ [/\beuropean\s+foul\s*(brood|brewed|broad)\b/gi,'European foulbrood'],
+ [/\bfoul (brewed|broad|brood)\b/gi,'foulbrood'],
+ [/\b(a f b|afb)\b/gi,'AFB'],[/\b(e f b|efb)\b/gi,'EFB'],
+ [/\b(deformed|de formed|reformed)\s+(wing|wings|wink)\s+(virus|viruses|fires)\b/gi,'deformed wing virus'],
+ [/\b(d w v|dwv)\b/gi,'DWV'],
+ [/\b(brawler|braula|brother|brawla)\s+(fly|flies|coeca)\b/gi,function(m,a,b){return 'Braula '+b.toLowerCase();}],
+ [/\bbee (lose|loose|lies|lice|louse)\b/gi,function(m,a){return /lice|lies/i.test(a)?'bee lice':'bee louse';}],
+ [/\b(asian|asean|agent) (horn it|horn its|hornets?|horn net)\b/gi,function(m,a,b){return 'Asian hornet'+(/s$/i.test(b)?'s':'');}],
+ [/\bhorn (its|nets)\b/gi,'hornets'],
+ [/\bwasp's\b/gi,'wasps'],
+ [/\b(cape|cake|cap) (bees?|honey bees?)\b/gi,function(m,a,b){return 'Cape '+b.toLowerCase();}],
+ [/\b(cap ensis|cape ensis|cape and sis|capensis|capenses|cape in sis)\b/gi,'capensis'],
+ [/\bbee (pirates?|pie rates?|pirate's)\b/gi,function(m,a){return /s$/i.test(a)?'bee pirates':'bee pirate';}],
+ [/\bbee (wolf|wolves|woof)\b/gi,function(m,a){return /wolves/i.test(a)?'beewolves':'beewolf';}],
+ [/\bdeath'?s?[\s-]*head(ed)?\s+(hawk\s*moths?|hawk\s*mouths?|hawk\s*moss)\b/gi,function(m,a,b){return "death's-head hawkmoth"+(/moths$/i.test(b)?'s':'');}],
+ [/\bhoney (badges|badger's|badgers?)\b/gi,function(m,a){return /s$/i.test(a)&&!/badger$/i.test(a)?'honey badgers':'honey badger';}],
+ [/\b(robber|rubber|robert) (bees|b's)\b/gi,'robber bees'],
+ [/\blaying (walker|worker's|workers)\b/gi,function(m,a){return /workers/i.test(a)?'laying workers':'laying worker';}],
+ [/\b(sticky|sticking) (bored|bord|boards?)\b/gi,function(m,a,b){return 'sticky board'+(/boards$/i.test(b)?'s':'');}],
+ [/\bsugar (role|rolls?|rule)\b/gi,'sugar roll'],
+ [/\balcohol (watch|washes|wash)\b/gi,'alcohol wash'],
+ [/\b(screened|screen) bottom (bored|board)\b/gi,'screened bottom board'],
+ [/\b(i p m|ipm)\b/gi,'IPM'],
+ [/\b(ox alec|ox alic|oxallic|ox alick|oxalis|oxford)\s+(acid|dribble|vapou?r|vapou?ri[sz]ation|treatment)\b/gi,function(m,a,b){return 'oxalic '+b.toLowerCase();}],
+ [/\b(ox alec|ox alic|oxallic|ox alick)\b/gi,'oxalic'],
+ [/\b(for mick|formic|four mick|for make)\s+(acid|pro)\b/gi,function(m,a,b){return /pro/i.test(b)?'Formic Pro':'formic acid';}],
+ [/\b(a pivar|happy var|apiva|appy var|api var|a pie var)\b/gi,'Apivar'],
+ [/\b(a pea guard|apigard|api guard|happy guard|a pig guard|appy guard)\b/gi,'Apiguard'],
+ [/\b(a piston|apiston|api stan|happy stan)\b/gi,'Apistan'],
+ [/\b(api life var|apilife var|happy life far|api life far)\b/gi,'ApiLife Var'],
+ [/\b(thymo var|time over|thyme of are)\b/gi,'Thymovar'],
+ [/\b(api bio oxal|api bioxal|happy bio oxal)\b/gi,'Api-Bioxal'],
+ [/\b(max|macs|mac's|maqs|max's)\s+strips?\b/gi,'MAQS strips'],
+ [/\bmite away quick strips?\b/gi,'Mite Away Quick Strips'],
+ [/\b(time all|thyme ol|timol|thyme all|thymol)\b/gi,'thymol'],
+ [/\b(bay varol|bay barrel|bay var all|bayvarol|bay various)\b/gi,'Bayvarol'],
+ [/\b(check might|check mite|checkmite)\s*(plus|\+)?/gi,function(m,a,b){return 'CheckMite'+(b?'+':'');}],
+ [/\b(a meet raz|amy traz|ami traz|amitraz|a me traz|army traz)\b/gi,'amitraz'],
+ [/\btactic (strips?|treatment|dip)\b/gi,function(m,a){return 'Tactic '+a.toLowerCase();}],
+ [/\b(hop guard|hopguard)\b/gi,'HopGuard'],
+ [/\b(fuma gillin|fumagilin|fume a jillian|fumagillin)\b/gi,'fumagillin'],
+ [/\b(terra mycin|terramycin|terra my sin)\b/gi,'Terramycin'],
+ [/\b(oxy tetra cycline|oxytetracycline)\b/gi,'oxytetracycline'],
+ [/\b(drone brood|drone broad|drone brewed) (removal|trapping|frame|comb)\b/gi,function(m,a,b){return 'drone brood '+b.toLowerCase();}]
 ];
+/* context-aware pest words: 'best/past/pass/paste…' -> pest(s) only when it makes beekeeping sense */
+var PEST_MIS='(?:pest|pests|past|paste|pastes|best|bests|pass|passed|pets)';
+function pestFix(t,inPests){var P=PEST_MIS,pl=function(w){return /s$|ed$/i.test(w)&&!/^pass$/i.test(w)?'pests':'pest';};
+ t=t.replace(new RegExp('\\b(no|any|some|few|several|lots of|signs of|evidence of|sign of|check(?:ed)? for|looked for|looking for)\\s+'+P+'(?=\\s+(?:seen|found|present|spotted|noticed|observed|today|visible|activity|\\.|,|$))','gi'),function(m,a){return a+' pests';});
+ t=t.replace(new RegExp('\\b('+P+')(?=\\s+(?:check|checks|control|inspection|pressure|count|counts|monitoring|free|activity)\\b)','gi'),function(m,a){return pl(a);});
+ if(inPests)t=t.replace(new RegExp('\\b('+P+')(?=\\s+(?:management|problems?|issues?|levels?|load|treatment|damage|seen|found)\\b)','gi'),function(m,a){return pl(a);});
+ t=t.replace(new RegExp('\\b(integrated)\\s+'+P+'\\s+management\\b','gi'),'integrated pest management');
+ t=t.replace(new RegExp('\\b'+P+'\\s+(and|or|&)\\s+(disease|diseases)\\b','gi'),function(m,a,b){return 'pests '+a+' '+b;});
+ t=t.replace(/\b(mights?|might's)\s+(drop|wash|count|counts|load|levels?|board)\b/gi,function(m,a,b){return 'mite '+b.toLowerCase();});
+ t=t.replace(/\b(varroa|natural|daily|weekly|24 hour)\s+might\b/gi,'$1 mite');
+ if(inPests){
+  if(new RegExp('^\\s*(no\\s+)?'+P+'\\s*(seen|found|none)?\\s*[.!]?\\s*$','i').test(t))t=t.replace(new RegExp('\\b'+P+'\\b','i'),function(w){return /^no\b/i.test(t)||/s$|ed$/i.test(w)?'pests':'pest';});
+  t=t.replace(/\b(bests|pastes|pets)\b/gi,'pests');
+  t=t.replace(/\b(mights|might's)\b/gi,'mites');
+  t=t.replace(/\b(\d+|a|one|no|few|some|any|varroa|several|many|lots of|tracheal)\s+might\b(?!\s+(be|have|not|need|want|get|go|come|swarm|abscond|rob|die))/gi,'$1 mite');
+  t=t.replace(/\b(mite|mites)\s+(drop|wash|count)\b/gi,function(m,a,b){return 'mite '+b.toLowerCase();});}
+ return t;}
 var NW={zero:0,one:1,two:2,three:3,four:4,five:5,six:6,seven:7,eight:8,nine:9,ten:10,eleven:11,twelve:12,thirteen:13,fourteen:14,fifteen:15,sixteen:16,seventeen:17,eighteen:18,nineteen:19},TW={twenty:20,thirty:30,forty:40,fourty:40,fifty:50,sixty:60,seventy:70,eighty:80,ninety:90};
 function fixTemp(t){
   t=t.replace(/\b(minus |negative )?(twenty|thirty|forty|fourty|fifty|sixty|seventy|eighty|ninety)(?:[\s-]+(one|two|three|four|five|six|seven|eight|nine))?(\s*(?:degrees?|degree|°))/gi,function(m,neg,tn,on,rest){return (neg?'-':'')+(TW[tn.toLowerCase()]+(on?NW[on.toLowerCase()]:0))+rest;});
@@ -597,7 +676,7 @@ function restartField(el){if(!el)return;stopListen();clearField(el);
 var vIns={};
 function vWords(x){return norm(x).split(' ').filter(Boolean);}
 function vTidy(t,prev){t=t.replace(/\s*\b(full stop|period)\b/gi,'.').replace(/\s*\bcomma\b/gi,',').replace(/\s*\bquestion mark\b/gi,'?').replace(/\s*\b(exclamation mark)\b/gi,'!').replace(/\s*\b(new line|next line|new paragraph)\b\s*/gi,'\n').replace(/\bi\b/g,'I').replace(/([.!?]\s+|\n)([a-z])/g,function(m,a,b){return a+b.toUpperCase();});if(!/\S/.test(prev||'')||/[.!?\n]\s*$/.test(prev||''))t=t.replace(/^\s*([a-z])/,function(m,a){return a.toUpperCase();});return t;}
-function voiceInsert(el,t){t=String(t||'').trim();if(!el||!t)return false;if(el.tagName==='TEXTAREA')t=vTidy(t,el.value);var k=el.id,now=Date.now(),L=vIns[k],v=el.value||'';
+function voiceInsert(el,t){t=String(t||'').trim();if(!el||!t)return false;t=pestFix(t,(el.dataset&&el.dataset.f)==='pests'||(el.dataset&&el.dataset.f)==='treatments');if(el.tagName==='TEXTAREA')t=vTidy(t,el.value);var k=el.id,now=Date.now(),L=vIns[k],v=el.value||'';
   var tw=vWords(t),fw=vWords(v);
   if(L&&now-L.at<6000&&fw.length){var lw=vWords(L.t);
     // exact repeat of the last insertion, or text already at the field tail
@@ -1076,7 +1155,7 @@ app.addEventListener('submit',function(e){e.preventDefault();
   if(e.target.id==='hiveForm'){var n=document.getElementById('hName').value.trim();if(!n){toast('Please enter a hive name',true);return;}
     var h={id:uid(),name:n,notes:document.getElementById('hNotes').value.trim(),created:Date.now(),inspections:[]};state.hives.push(h);if(save()){pushH('Add hive “'+n+'”',[{id:h.id,ix:-1,j:null}]);toast('Hive added');go({name:'hive',id:h.id});}}
   else if(e.target.id==='inspForm'){if((draft.step||0)<LASTSTEP)setStep(draft.step+1);else submitInsp();}});
-window.HiveNotes={vt:function(){return actT;},route:function(){return route;},setStepN:function(k){draft.step=k;showStep();},setVT:setVT,restartField:restartField,openMicGuide:openMicGuide,openSetup:openSetup,uaKind:uaKind,fixSteps:fixSteps,micBlocked:micBlocked,setHF:setHF,isHF:function(){return hfOn;},resize:resize,validate:validate,importHives:importHives,command:command,getState:function(){return state;},getDraft:function(){return draft;},getRound:function(){return round;},fieldHist:function(){return fh;},camOpen:function(){return !!cam;},camFacing:function(){return cam&&cam.facing;},camTracks:function(){return cam&&cam.stream?cam.stream.getTracks().map(function(t){return t.readyState;}):null;},voiceAct:voiceAct,wxVoice:wxVoice,fixTemp:fixTemp,refit:refit,voiceButtons:voiceButtons,hfHandle:hfHandle,fixVocab:fixVocab,pickAlt:pickAlt,isCmd:isCmd,undo:undoLast,undoStack:function(){return ustack;},KEY:KEY,saveDraft:saveDraftNow,exportPdf:exportPdf};
+window.HiveNotes={vt:function(){return actT;},route:function(){return route;},setStepN:function(k){draft.step=k;showStep();},setVT:setVT,restartField:restartField,openMicGuide:openMicGuide,openSetup:openSetup,uaKind:uaKind,fixSteps:fixSteps,micBlocked:micBlocked,setHF:setHF,isHF:function(){return hfOn;},resize:resize,validate:validate,importHives:importHives,command:command,getState:function(){return state;},getDraft:function(){return draft;},getRound:function(){return round;},fieldHist:function(){return fh;},camOpen:function(){return !!cam;},camFacing:function(){return cam&&cam.facing;},camTracks:function(){return cam&&cam.stream?cam.stream.getTracks().map(function(t){return t.readyState;}):null;},voiceAct:voiceAct,wxVoice:wxVoice,voiceInsert:voiceInsert,fixVocab:fixVocab,clearVIns:function(){vIns={};},fixTemp:fixTemp,refit:refit,voiceButtons:voiceButtons,hfHandle:hfHandle,fixVocab:fixVocab,pickAlt:pickAlt,isCmd:isCmd,undo:undoLast,undoStack:function(){return ustack;},KEY:KEY,saveDraft:saveDraftNow,exportPdf:exportPdf};
 (function(){var o=readDraft();if(o&&!hive(o.hive))clearDraft();})();
 try{history.replaceState({d:0,r:{name:'home'}},'');}catch(e){}render();
 document.querySelectorAll('.homeTap').forEach(function(el){var f=function(){stopListen();if(route.name==='form')leaveForm({name:'home'});else go({name:'home'});};el.onclick=f;el.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();f();}};});
